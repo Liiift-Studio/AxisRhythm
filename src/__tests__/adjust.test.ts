@@ -1,58 +1,97 @@
 // axis-rhythm/src/__tests__/adjust.test.ts — core algorithm tests
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { applyAxisRhythm, removeAxisRhythm, getCleanHTML } from '../core/adjust'
 import { AXIS_RHYTHM_CLASSES } from '../core/types'
 
 // ─── DOM measurement mock ─────────────────────────────────────────────────────
-const CONTAINER_WIDTH = 600
-const WORD_WIDTH = 80
+const CONTAINER_W = 600
+const WORD_W = 80
 
+/**
+ * Tracks word span getBoundingClientRect call order so we can simulate line breaks.
+ * 7 words fit per line: 7 * 80 = 560 < 600. Each line is 20px tall.
+ */
+let wordCallIndex = 0
+
+/**
+ * Mocks offsetWidth on HTMLElement.prototype (not instance) so happy-dom's
+ * constructor `this.offsetWidth = 0` doesn't throw — the no-op setter absorbs it.
+ * Also mocks getBoundingClientRect to return position data.
+ * Returns a cleanup function restoring both originals.
+ */
 function mockMeasurement() {
-	const proto = Object.getPrototypeOf(document.createElement('div'))
+	wordCallIndex = 0
+
+	const proto = HTMLElement.prototype
+	const priorOffsetWidth = Object.getOwnPropertyDescriptor(proto, 'offsetWidth')
 	Object.defineProperty(proto, 'offsetWidth', {
 		configurable: true,
 		get: function (this: HTMLElement) {
 			if (this.classList?.contains(AXIS_RHYTHM_CLASSES.probe)) return 0
-			if (this.classList?.contains(AXIS_RHYTHM_CLASSES.word)) return WORD_WIDTH
-			return CONTAINER_WIDTH
+			if (this.classList?.contains(AXIS_RHYTHM_CLASSES.word)) return WORD_W
+			return CONTAINER_W
 		},
+		// No-op setter required — happy-dom's HTMLElement constructor does `this.offsetWidth = 0`
+		set: () => {},
 	})
+
+	const origBCR = Element.prototype.getBoundingClientRect
 	Element.prototype.getBoundingClientRect = function (this: Element) {
 		const el = this as HTMLElement
-		if (el.classList?.contains(AXIS_RHYTHM_CLASSES.probe)) return { width: 0 } as DOMRect
-		const w = el.classList?.contains(AXIS_RHYTHM_CLASSES.word) ? WORD_WIDTH : CONTAINER_WIDTH
-		return { width: w, height: 20, top: 0, left: 0, right: w, bottom: 20, x: 0, y: 0, toJSON: () => {} }
+		if (el.classList?.contains(AXIS_RHYTHM_CLASSES.probe)) {
+			return { width: 0, top: 0, left: 0, bottom: 20, right: 0, height: 20, x: 0, y: 0, toJSON: () => {} } as DOMRect
+		}
+		if (el.classList?.contains(AXIS_RHYTHM_CLASSES.word)) {
+			// Assign each word to a line based on call order: 7 words per line at 80px each
+			const lineIndex = Math.floor(wordCallIndex / 7)
+			wordCallIndex++
+			const top = lineIndex * 20
+			return { width: WORD_W, top, left: 0, bottom: top + 20, right: WORD_W, height: 20, x: 0, y: top, toJSON: () => {} } as DOMRect
+		}
+		return { width: CONTAINER_W, top: 0, left: 0, bottom: 20, right: CONTAINER_W, height: 20, x: 0, y: 0, toJSON: () => {} } as DOMRect
+	}
+
+	return () => {
+		if (priorOffsetWidth) Object.defineProperty(proto, 'offsetWidth', priorOffsetWidth)
+		Element.prototype.getBoundingClientRect = origBCR
 	}
 }
 
 function makeElement(html: string): HTMLElement {
 	const el = document.createElement('p')
 	el.innerHTML = html
-	el.style.width = `${CONTAINER_WIDTH}px`
+	el.style.width = `${CONTAINER_W}px`
 	document.body.appendChild(el)
 	return el
 }
 
+/** Generate a string of n space-separated words */
+function nWords(n: number, word = 'word'): string {
+	return Array.from({ length: n }, () => word).join(' ')
+}
+
 // ─── Tests ────────────────────────────────────────────────────────────────────
 describe('axis-rhythm', () => {
+	let cleanup: (() => void) | null = null
+
 	beforeEach(() => {
 		document.body.innerHTML = ''
-		mockMeasurement()
+		cleanup = mockMeasurement()
 	})
 
-	it('getCleanHTML is idempotent', () => {
-		const el = makeElement('<em>Hello</em> world')
-		const html = getCleanHTML(el)
-		const html2 = getCleanHTML(el)
-		expect(html).toBe(html2)
+	afterEach(() => {
+		cleanup?.()
+		cleanup = null
 	})
 
+	// 1. applyAxisRhythm doesn't throw on empty element
 	it('applyAxisRhythm does not throw on empty element', () => {
 		const el = makeElement('')
 		const original = getCleanHTML(el)
 		expect(() => applyAxisRhythm(el, original, {})).not.toThrow()
 	})
 
+	// 2. removeAxisRhythm restores original HTML
 	it('removeAxisRhythm restores original HTML', () => {
 		const el = makeElement('<em>Hello</em> world')
 		const original = getCleanHTML(el)
@@ -61,11 +100,108 @@ describe('axis-rhythm', () => {
 		expect(el.innerHTML).toBe(original)
 	})
 
-	it('preserves inline elements', () => {
+	// 3. getCleanHTML is idempotent
+	it('getCleanHTML is idempotent', () => {
+		const el = makeElement('<em>Hello</em> world')
+		const html1 = getCleanHTML(el)
+		const html2 = getCleanHTML(el)
+		expect(html1).toBe(html2)
+	})
+
+	// Also verify getCleanHTML strips axis-rhythm markup after apply
+	it('getCleanHTML strips axis-rhythm line markup after apply', () => {
+		const el = makeElement(nWords(14))
+		const original = getCleanHTML(el)
+		applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 96], period: 2 })
+		const cleaned = getCleanHTML(el)
+		expect(cleaned).not.toContain(AXIS_RHYTHM_CLASSES.line)
+		expect(cleaned).not.toContain(AXIS_RHYTHM_CLASSES.word)
+	})
+
+	// 4. Inline elements (<em>, <strong>) are preserved after apply
+	it('preserves <em> and <strong> inline elements after apply', () => {
 		const el = makeElement('<em>italic</em> and <strong>bold</strong>')
 		const original = getCleanHTML(el)
 		applyAxisRhythm(el, original, {})
 		expect(el.querySelector('em')).toBeTruthy()
 		expect(el.querySelector('strong')).toBeTruthy()
+	})
+
+	// 5. After apply with { axis: 'wdth', values: [100, 96], period: 2 },
+	//    first line wrapper has wdth 100 and second has wdth 96
+	it('applies font-variation-settings wdth 100 to line 1 and wdth 96 to line 2', () => {
+		// 14 words → 2 lines of 7 (7 * 80px = 560 < 600px container)
+		const el = makeElement(nWords(14))
+		const original = getCleanHTML(el)
+		applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 96], period: 2 })
+
+		const lines = el.querySelectorAll<HTMLElement>(`.${AXIS_RHYTHM_CLASSES.line}`)
+		expect(lines.length).toBeGreaterThanOrEqual(2)
+		expect(lines[0].style.fontVariationSettings).toContain("'wdth' 100")
+		expect(lines[1].style.fontVariationSettings).toContain("'wdth' 96")
+	})
+
+	// 5b. Output HTML contains the font-variation-settings strings
+	it('output HTML contains font-variation-settings strings', () => {
+		const el = makeElement(nWords(14))
+		const original = getCleanHTML(el)
+		applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 96], period: 2 })
+		expect(el.innerHTML).toContain("'wdth' 100")
+		expect(el.innerHTML).toContain("'wdth' 96")
+	})
+
+	// 6. align: 'bottom' reverses the cycle — last line gets values[0], second-to-last gets values[1]
+	it('align bottom: last line gets values[0] and second-to-last gets values[1]', () => {
+		// 14 words → 2 lines
+		const el = makeElement(nWords(14))
+		const original = getCleanHTML(el)
+		applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 96], period: 2, align: 'bottom' })
+
+		const lines = el.querySelectorAll<HTMLElement>(`.${AXIS_RHYTHM_CLASSES.line}`)
+		expect(lines.length).toBeGreaterThanOrEqual(2)
+		const last = lines[lines.length - 1]
+		const secondToLast = lines[lines.length - 2]
+		// align=bottom, 2 lines: cyclePos for last (index 1) = (2-1-1)%2=0 → values[0]=100
+		expect(last.style.fontVariationSettings).toContain("'wdth' 100")
+		// cyclePos for first (index 0) = (2-1-0)%2=1 → values[1]=96
+		expect(secondToLast.style.fontVariationSettings).toContain("'wdth' 96")
+	})
+
+	// 7. Custom period: 3 cycles through 3 values across 3 lines
+	it('period 3 applies three distinct axis values across three lines', () => {
+		// 21 words → 3 lines of 7 each
+		const el = makeElement(nWords(21))
+		const original = getCleanHTML(el)
+		applyAxisRhythm(el, original, { axis: 'wght', values: [400, 450, 500], period: 3, align: 'top' })
+
+		const lines = el.querySelectorAll<HTMLElement>(`.${AXIS_RHYTHM_CLASSES.line}`)
+		expect(lines.length).toBeGreaterThanOrEqual(3)
+		expect(lines[0].style.fontVariationSettings).toContain("'wght' 400")
+		expect(lines[1].style.fontVariationSettings).toContain("'wght' 450")
+		expect(lines[2].style.fontVariationSettings).toContain("'wght' 500")
+	})
+
+	// 8. Single-word input doesn't crash
+	it('single-word input does not crash', () => {
+		const el = makeElement('Hello')
+		const original = getCleanHTML(el)
+		expect(() => applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 96], period: 2 })).not.toThrow()
+		const lines = el.querySelectorAll<HTMLElement>(`.${AXIS_RHYTHM_CLASSES.line}`)
+		expect(lines.length).toBe(1)
+	})
+
+	// Bonus: apply is idempotent — applying twice from the same originalHTML produces the same result
+	it('apply is idempotent — applying twice does not double line wrappers', () => {
+		const el = makeElement(nWords(14))
+		const original = getCleanHTML(el)
+		applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 96], period: 2 })
+		const linesAfterFirst = el.querySelectorAll(`.${AXIS_RHYTHM_CLASSES.line}`).length
+
+		// Reset wordCallIndex before second apply so measurements are consistent
+		wordCallIndex = 0
+		applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 96], period: 2 })
+		const linesAfterSecond = el.querySelectorAll(`.${AXIS_RHYTHM_CLASSES.line}`).length
+
+		expect(linesAfterSecond).toBe(linesAfterFirst)
 	})
 })

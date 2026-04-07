@@ -1,44 +1,224 @@
-// axis-rhythm/src/core/adjust.ts — framework-agnostic algorithm
-import type { AxisRhythmOptions } from './types'
+// axis-rhythm/src/core/adjust.ts — framework-agnostic axis-rhythm algorithm
+import { AXIS_RHYTHM_CLASSES, type AxisRhythmOptions } from './types'
+
+/** Resolved defaults applied when options are omitted */
+const DEFAULTS: Required<AxisRhythmOptions> = {
+	axis: 'wdth',
+	values: [100, 96],
+	period: 2,
+	align: 'top',
+}
 
 /**
- * Strip any prior axis-rhythm markup from an element and return clean innerHTML.
- * Safe to call multiple times — idempotent.
+ * Returns the innerHTML of an element with all axis-rhythm injected markup removed,
+ * unwrapping their children in place. Safe to call multiple times — idempotent.
+ *
+ * @param el - Element that may contain axis-rhythm markup
  */
 export function getCleanHTML(el: HTMLElement): string {
 	const clone = el.cloneNode(true) as HTMLElement
-	clone.querySelectorAll('[data-axis-rhythm]').forEach((node) => {
-		node.replaceWith(...node.childNodes)
+	// Remove all injected line and word spans by unwrapping their children in place.
+	// Query for both old data-attribute pattern and current class-based pattern.
+	const injected = clone.querySelectorAll(
+		`[data-axis-rhythm], .${AXIS_RHYTHM_CLASSES.line}, .${AXIS_RHYTHM_CLASSES.word}`,
+	)
+	// Iterate in reverse to handle nested spans safely.
+	const nodes = Array.from(injected).reverse()
+	nodes.forEach((node) => {
+		const parent = node.parentNode
+		if (!parent) return
+		while (node.firstChild) parent.insertBefore(node.firstChild, node)
+		parent.removeChild(node)
 	})
+	// Remove any injected <br> elements left between lines.
+	clone.querySelectorAll('br[data-ar-break]').forEach((br) => br.parentNode?.removeChild(br))
 	return clone.innerHTML
 }
 
 /**
- * Apply axis-rhythm effect to an element.
- * @param element   - Target element
+ * Apply the axis-rhythm effect to an element.
+ *
+ * The algorithm runs five passes:
+ *  1. Reset — restore the element to the original HTML snapshot (idempotent)
+ *  2. Word wrap — wrap every word in a measurement span (.ar-word)
+ *  3. Read phase — set display:inline-block; white-space:nowrap on word spans,
+ *     read getBoundingClientRect().top for each, group by rounded top into lines
+ *  4. Write phase — wrap each line group in a .ar-line span with font-variation-settings,
+ *     remove word spans, insert <br> between lines
+ *  5. Scroll restore — rAF to undo any scroll jump caused by DOM mutations
+ *
+ * @param element      - Target element (must be in the live DOM and visible)
  * @param originalHTML - Clean HTML snapshot from getCleanHTML()
- * @param options   - AxisRhythmOptions
+ * @param options      - AxisRhythmOptions (merged with defaults)
  */
 export function applyAxisRhythm(
 	element: HTMLElement,
 	originalHTML: string,
-	options: AxisRhythmOptions,
+	options: AxisRhythmOptions = {},
 ): void {
 	if (typeof window === 'undefined') return
 
 	// Save scroll position — iOS Safari does not support overflow-anchor: none
 	const scrollY = window.scrollY
 
-	// Pass 1: Reset to original HTML (idempotent)
+	// Resolve options against defaults.
+	const axis = options.axis ?? DEFAULTS.axis
+	const values = options.values ?? DEFAULTS.values
+	const period = Math.max(1, Math.round(options.period ?? DEFAULTS.period))
+	const align = options.align ?? DEFAULTS.align
+
+	// --- Pass 1: Reset ---
 	element.innerHTML = originalHTML
 
-	// TODO: implement axis-rhythm algorithm
-	// Follow the pattern from PROCESS.md:
-	//   - Batch all DOM reads before writes
-	//   - Use recursive childNodes walk (not createTreeWalker — happy-dom bug)
-	//   - Give measurement probes a distinct CSS class
+	// --- Pass 2: Word wrap ---
+	// Collect all text nodes via recursive childNodes walk.
+	// createTreeWalker is intentionally avoided — it skips inline elements in happy-dom 12.
+	const textNodes: Text[] = []
+	;(function collectTextNodes(node: Node) {
+		if (node.nodeType === Node.TEXT_NODE) {
+			textNodes.push(node as Text)
+		} else {
+			node.childNodes.forEach(collectTextNodes)
+		}
+	})(element)
 
-	// Restore scroll after DOM mutations
+	// Word spans collected in DOM order for later measurement.
+	const wordSpans: HTMLElement[] = []
+
+	for (const textNode of textNodes) {
+		const text = textNode.textContent ?? ''
+		if (!text.trim()) continue
+
+		// Split into alternating [whitespace, word, whitespace, word, …] tokens.
+		const tokens = text.split(/(\S+)/)
+		const fragment = document.createDocumentFragment()
+
+		for (let i = 0; i < tokens.length; i += 2) {
+			const space = tokens[i]       // whitespace gap before this word
+			const word  = tokens[i + 1]  // word (undefined at end of string)
+			if (!word) continue
+
+			// Include trailing whitespace in the last word of this text node to avoid
+			// orphan text nodes at inline-element boundaries dropping inter-word spaces.
+			const isLastWord = tokens[i + 3] === undefined
+			const trailingSpace = isLastWord ? (tokens[i + 2] ?? '') : ''
+
+			const span = document.createElement('span')
+			span.className = AXIS_RHYTHM_CLASSES.word
+			span.textContent = space + word + trailingSpace
+			fragment.appendChild(span)
+			wordSpans.push(span)
+		}
+
+		textNode.parentNode!.replaceChild(fragment, textNode)
+	}
+
+	// If no words were found, nothing more to do.
+	if (wordSpans.length === 0) {
+		requestAnimationFrame(() => {
+			if (Math.abs(window.scrollY - scrollY) > 2) {
+				window.scrollTo({ top: scrollY, behavior: 'instant' })
+			}
+		})
+		return
+	}
+
+	// --- Pass 3: Read phase — measure line positions ---
+	// Set display:inline-block so getBoundingClientRect().top gives the line's y position.
+	wordSpans.forEach((span) => {
+		span.style.display = 'inline-block'
+		span.style.whiteSpace = 'nowrap'
+	})
+
+	// Group consecutive word spans that share the same rounded top value into lines.
+	// All reads are batched here before any writes.
+	interface LineGroup {
+		spans: HTMLElement[]
+		top: number
+	}
+	const lineGroups: LineGroup[] = []
+	let currentGroup: LineGroup | null = null
+
+	for (const span of wordSpans) {
+		const top = Math.round(span.getBoundingClientRect().top)
+		if (currentGroup === null || top !== currentGroup.top) {
+			currentGroup = { spans: [], top }
+			lineGroups.push(currentGroup)
+		}
+		currentGroup.spans.push(span)
+	}
+
+	const totalLines = lineGroups.length
+
+	// --- Pass 4: Write phase — wrap lines and apply axis values ---
+	// Build a document fragment to replace element.innerHTML with line wrappers.
+	// We walk the original DOM structure, replacing word spans with line wrappers + <br>.
+	// Strategy: collect the line HTML segments, then reassemble.
+
+	// For each line group, determine the axis value based on cyclePos.
+	const lineElements: HTMLElement[] = []
+
+	lineGroups.forEach((group, lineIndex) => {
+		const cyclePos = align === 'bottom'
+			? (totalLines - 1 - lineIndex) % period
+			: lineIndex % period
+		const axisValue = values[cyclePos % values.length]
+
+		// Create the line wrapper span.
+		const lineSpan = document.createElement('span')
+		lineSpan.className = AXIS_RHYTHM_CLASSES.line
+		lineSpan.style.display = 'inline-block'
+		lineSpan.style.whiteSpace = 'nowrap'
+		lineSpan.style.fontVariationSettings = `'${axis}' ${axisValue}`
+
+		// Move word spans into the line span, unwrapping them (keeping text content).
+		// We preserve inline element ancestry by rebuilding the structure.
+		for (const wordSpan of group.spans) {
+			// Walk ancestors up to element to collect inline wrappers.
+			const ancestors: Element[] = []
+			let node: Element | null = wordSpan.parentElement
+			while (node && node !== element) {
+				ancestors.push(node)
+				node = node.parentElement
+			}
+
+			// The word's text node content.
+			const textContent = wordSpan.textContent ?? ''
+
+			if (ancestors.length === 0) {
+				// Word span is a direct child of element — just append text.
+				lineSpan.appendChild(document.createTextNode(textContent))
+			} else {
+				// Rebuild ancestor inline elements (innermost first in ancestors array).
+				// ancestors[0] = immediate parent of wordSpan, ancestors[last] = child of element.
+				let innerNode: Node = document.createTextNode(textContent)
+				for (let a = 0; a < ancestors.length; a++) {
+					const wrapper = ancestors[a].cloneNode(false) as Element
+					wrapper.appendChild(innerNode)
+					innerNode = wrapper
+				}
+				lineSpan.appendChild(innerNode)
+			}
+		}
+
+		lineElements.push(lineSpan)
+	})
+
+	// Now replace the element's content with the line spans, separated by <br>.
+	// We reset innerHTML to originalHTML first (already done in Pass 1), then
+	// clear it and insert our constructed line elements.
+	element.innerHTML = ''
+
+	lineElements.forEach((lineEl, i) => {
+		element.appendChild(lineEl)
+		if (i < lineElements.length - 1) {
+			const br = document.createElement('br')
+			br.setAttribute('data-ar-break', '')
+			element.appendChild(br)
+		}
+	})
+
+	// --- Pass 5: Restore scroll via rAF ---
 	requestAnimationFrame(() => {
 		if (Math.abs(window.scrollY - scrollY) > 2) {
 			window.scrollTo({ top: scrollY, behavior: 'instant' })
@@ -47,7 +227,10 @@ export function applyAxisRhythm(
 }
 
 /**
- * Remove axis-rhythm markup and restore original HTML.
+ * Remove axis-rhythm markup and restore the element to its original HTML.
+ *
+ * @param element      - The element that was previously adjusted
+ * @param originalHTML - The snapshot passed to the original applyAxisRhythm call
  */
 export function removeAxisRhythm(element: HTMLElement, originalHTML: string): void {
 	element.innerHTML = originalHTML
