@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 	openGraph: {
 		title: "Axis Rhythm — Per-line variable font axis alternation",
 		description: "Cycle any variable font axis across paragraph lines. A typographic texture technique, now in one npm package.",
-		url: "https://axis-rhythm.liiift.studio",
+		url: "https://axisrhythm.com",
 		siteName: "Axis Rhythm",
 		type: "website",
 	},
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 		title: "Axis Rhythm — Per-line variable font axis alternation",
 		description: "Cycle any variable font axis across paragraph lines. A typographic texture technique, now in one npm package.",
 	},
-	metadataBase: new URL("https://axis-rhythm.liiift.studio"),
+	metadataBase: new URL("https://axisrhythm.com"),
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
