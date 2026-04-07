@@ -1,5 +1,5 @@
 // axis-rhythm/src/react/AxisRhythmText.tsx — React component wrapper
-import { forwardRef } from 'react'
+import React, { forwardRef } from 'react'
 import { useAxisRhythm } from './useAxisRhythm'
 import type { AxisRhythmOptions } from '../core/types'
 
@@ -7,7 +7,7 @@ interface AxisRhythmTextProps extends AxisRhythmOptions {
 	children: React.ReactNode
 	className?: string
 	style?: React.CSSProperties
-	as?: keyof JSX.IntrinsicElements
+	as?: React.ElementType
 }
 
 /**
@@ -17,7 +17,7 @@ export const AxisRhythmText = forwardRef<HTMLElement, AxisRhythmTextProps>(
 	function AxisRhythmText({ children, className, style, as: Tag = 'p', ...options }, _ref) {
 		const innerRef = useAxisRhythm(options)
 		return (
-			<Tag ref={innerRef as React.Ref<HTMLParagraphElement>} className={className} style={style}>
+			<Tag ref={innerRef as React.Ref<HTMLElement>} className={className} style={style}>
 				{children}
 			</Tag>
 		)
