@@ -3,7 +3,7 @@
 // Click-to-copy npm install snippet with a link to the npm package page
 import { useState } from "react"
 
-const CMD = "npm install axis-rhythm"
+const CMD = "npm install @liiift-studio/axis-rhythm"
 const NPM_URL = "https://www.npmjs.com/package/axis-rhythm"
 
 /** Displays the install command, copies it to clipboard on click, and links to npm */

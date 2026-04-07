@@ -60,7 +60,7 @@ export default function Home() {
 				<div className="flex flex-col gap-8 text-sm">
 					<div className="flex flex-col gap-3">
 						<p className="opacity-50">Drop-in component</p>
-						<CodeBlock code={`import { AxisRhythmText } from 'axis-rhythm'
+						<CodeBlock code={`import { AxisRhythmText } from '@liiift-studio/axis-rhythm'
 
 <AxisRhythmText axis="wdth" values={[100, 88]} period={2}>
   Your paragraph text here...
@@ -68,14 +68,14 @@ export default function Home() {
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="opacity-50">Hook — attach to any element</p>
-						<CodeBlock code={`import { useAxisRhythm } from 'axis-rhythm'
+						<CodeBlock code={`import { useAxisRhythm } from '@liiift-studio/axis-rhythm'
 
 const ref = useAxisRhythm({ axis: 'wdth', values: [100, 88], period: 2 })
 <p ref={ref}>{children}</p>`} />
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="opacity-50">Vanilla JS</p>
-						<CodeBlock code={`import { applyAxisRhythm } from 'axis-rhythm'
+						<CodeBlock code={`import { applyAxisRhythm } from '@liiift-studio/axis-rhythm'
 
 const el = document.querySelector('p')
 const original = el.innerHTML
