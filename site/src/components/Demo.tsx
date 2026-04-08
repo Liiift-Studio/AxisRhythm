@@ -70,6 +70,14 @@ export default function Demo() {
 				{SAMPLE}
 			</AxisRhythmText>
 			<p className="text-xs opacity-50 italic mt-6">Each line gets a different axis value. The paragraph reads as one.</p>
+			<div className="flex justify-end mt-8">
+				<div className="w-72 flex flex-col gap-2">
+					<span className="text-xs uppercase tracking-widest opacity-50">without</span>
+					<div className="rounded-lg p-3" style={{ background: "rgba(0,0,0,0.15)" }}>
+						<p style={{ ...sampleStyle, fontSize: "0.7rem", lineHeight: "1.8" }} className="opacity-60">{SAMPLE}</p>
+					</div>
+				</div>
+			</div>
 		</div>
 	)
 }
