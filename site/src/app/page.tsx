@@ -91,6 +91,7 @@ applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 88], period: 2 })`} 
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">values</td><td className="py-2 pr-6">[100, 96]</td><td className="py-2">Axis values to cycle through across lines.</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">period</td><td className="py-2 pr-6">2</td><td className="py-2">Lines per cycle.</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">align</td><td className="py-2 pr-6">'top'</td><td className="py-2">'top' counts from first line, 'bottom' from last.</td></tr>
+								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">lineDetection</td><td className="py-2 pr-6">&apos;bcr&apos;</td><td className="py-2">&apos;bcr&apos; reads actual browser layout — ground truth, works with any font and inline HTML. &apos;canvas&apos; uses <a href="https://github.com/chenglou/pretext" className="underline opacity-70">@chenglou/pretext</a> for arithmetic line breaking with no forced reflow on resize. Install pretext separately.</td></tr>
 							</tbody>
 						</table>
 					</div>
