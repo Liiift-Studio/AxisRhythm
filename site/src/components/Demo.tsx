@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useDeferredValue } from "react"
-import { AxisRhythmText } from "@liiift-studio/axis-rhythm"
+import { AxisRhythmText } from "@liiift-studio/axisRhythm"
 
 const SAMPLE = `Typography has always been as much about texture as legibility. The even grey of a well-set paragraph — called its colour by compositors — depends on consistency: consistent spacing, consistent weight, consistent rhythm from line to line. Variable fonts crack this open. The wdth axis can compress or expand a letterform; the wght axis can lighten or darken it; the opsz axis can adjust optical weight for the point size. Applied uniformly, these give you a different typeface. Applied line by line, they give you something more interesting: a paragraph with rhythm. Each line carries a different setting but the text reads as one. The difference is a texture the eye feels before the mind names it.`
 
