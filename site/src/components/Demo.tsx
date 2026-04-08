@@ -23,6 +23,32 @@ function Slider({ label, value, min, max, step, onChange }: { label: string; val
 	)
 }
 
+/** Split-circle before/after toggle — right half filled = effect on, left half outline = without */
+function CompareButton({ active, onClick }: { active: boolean; onClick: () => void }) {
+	return (
+		<button
+			onClick={onClick}
+			aria-label="Toggle before/after comparison"
+			title={active ? 'Hide comparison' : 'Compare without effect'}
+			style={{
+				position: 'absolute', bottom: 0, right: 0,
+				width: 32, height: 32, borderRadius: '50%',
+				border: '1px solid currentColor',
+				opacity: active ? 0.8 : 0.25,
+				background: 'transparent',
+				display: 'flex', alignItems: 'center', justifyContent: 'center',
+				cursor: 'pointer', transition: 'opacity 0.15s ease',
+			}}
+		>
+			<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+				<circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1"/>
+				<path d="M7 1.5 A5.5 5.5 0 0 1 7 12.5 Z" fill="currentColor"/>
+				<line x1="7" y1="1.5" x2="7" y2="12.5" stroke="currentColor" strokeWidth="0.75" opacity="0.5"/>
+			</svg>
+		</button>
+	)
+}
+
 export default function Demo() {
 	const [axis, setAxis] = useState<AxisKey>('wdth')
 	const [valueHigh, setValueHigh] = useState(AXIS_CONFIG.wdth.defaultHigh)
@@ -65,16 +91,15 @@ export default function Demo() {
 				{(['top', 'bottom'] as const).map(v => (
 					<button key={v} onClick={() => setAlign(v)} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: align === v ? 1 : 0.5, background: align === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
 				))}
-				<span className="text-xs uppercase tracking-widest opacity-50 ml-4">Compare</span>
-				<button onClick={() => setComparing(v => !v)} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: comparing ? 1 : 0.5, background: comparing ? 'var(--btn-bg)' : 'transparent' }}>without</button>
 			</div>
-			<div className="relative">
+			<div className="relative pb-8">
 				<AxisRhythmText axis={axis} values={[dValueHigh, dValueLow]} period={dPeriod} align={align} style={sampleStyle}>
 					{SAMPLE}
 				</AxisRhythmText>
 				{comparing && (
 					<p aria-hidden style={{ ...sampleStyle, position: 'absolute', top: 0, left: 0, width: '100%', margin: 0, opacity: 0.25, pointerEvents: 'none' }}>{SAMPLE}</p>
 				)}
+				<CompareButton active={comparing} onClick={() => setComparing(v => !v)} />
 			</div>
 			<p className="text-xs opacity-50 italic mt-6">Each line gets a different axis value. The paragraph reads as one.</p>
 		</div>
