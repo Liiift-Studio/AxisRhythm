@@ -204,4 +204,86 @@ describe('axis-rhythm', () => {
 
 		expect(linesAfterSecond).toBe(linesAfterFirst)
 	})
+
+	// 12. All produced line spans have fontVariationSettings set
+	it('every line span has a non-empty fontVariationSettings style', () => {
+		const el = makeElement(nWords(14))
+		const original = getCleanHTML(el)
+		applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 96], period: 2 })
+		const lines = el.querySelectorAll<HTMLElement>(`.${AXIS_RHYTHM_CLASSES.line}`)
+		expect(lines.length).toBeGreaterThan(0)
+		lines.forEach((line) => {
+			expect(line.style.fontVariationSettings).toBeTruthy()
+		})
+	})
+
+	// 13. Period wraps — 4 lines with period=2: lines 0,2 get values[0], lines 1,3 get values[1]
+	it('period wraps — 4 lines with period=2 alternates correctly', () => {
+		const el = makeElement(nWords(28))
+		const original = getCleanHTML(el)
+		applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 96], period: 2, align: 'top' })
+		const lines = el.querySelectorAll<HTMLElement>(`.${AXIS_RHYTHM_CLASSES.line}`)
+		expect(lines.length).toBeGreaterThanOrEqual(4)
+		expect(lines[0].style.fontVariationSettings).toContain("'wdth' 100")
+		expect(lines[1].style.fontVariationSettings).toContain("'wdth' 96")
+		expect(lines[2].style.fontVariationSettings).toContain("'wdth' 100")
+		expect(lines[3].style.fontVariationSettings).toContain("'wdth' 96")
+	})
+
+	// 14. Whitespace-only element does not throw
+	it('whitespace-only element does not throw', () => {
+		const el = makeElement('   ')
+		const original = getCleanHTML(el)
+		expect(() => applyAxisRhythm(el, original, {})).not.toThrow()
+	})
+
+	// 15. Single line with align:bottom still gets values[0] (bottom line = last = only line)
+	it('single line with align:bottom gets values[0]', () => {
+		const el = makeElement(nWords(3))
+		const original = getCleanHTML(el)
+		applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 96], period: 2, align: 'bottom' })
+		const lines = el.querySelectorAll<HTMLElement>(`.${AXIS_RHYTHM_CLASSES.line}`)
+		expect(lines.length).toBe(1)
+		expect(lines[0].style.fontVariationSettings).toContain("'wdth' 100")
+	})
+
+	// 16. Custom wght axis applies correct values
+	it('custom wght axis applies correct values to lines', () => {
+		const el = makeElement(nWords(14))
+		const original = getCleanHTML(el)
+		applyAxisRhythm(el, original, { axis: 'wght', values: [400, 700], period: 2, align: 'top' })
+		const lines = el.querySelectorAll<HTMLElement>(`.${AXIS_RHYTHM_CLASSES.line}`)
+		expect(lines.length).toBeGreaterThanOrEqual(2)
+		expect(lines[0].style.fontVariationSettings).toContain("'wght' 400")
+		expect(lines[1].style.fontVariationSettings).toContain("'wght' 700")
+	})
+
+	// 17. getCleanHTML after apply contains no axis-rhythm class names
+	it('getCleanHTML after apply strips all injected markup', () => {
+		const el = makeElement(nWords(14))
+		const original = getCleanHTML(el)
+		applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 96], period: 2 })
+		const cleaned = getCleanHTML(el)
+		expect(cleaned).not.toContain(AXIS_RHYTHM_CLASSES.line)
+		expect(cleaned).not.toContain(AXIS_RHYTHM_CLASSES.word)
+	})
+
+	// 18. Nested <a> link is preserved after apply
+	it('preserves <a> links inside element after apply', () => {
+		const el = makeElement('<a href="#">click</a> to learn more about typography')
+		const original = getCleanHTML(el)
+		applyAxisRhythm(el, original, {})
+		const link = el.querySelector('a')
+		expect(link).toBeTruthy()
+		expect(link?.getAttribute('href')).toBe('#')
+	})
+
+	// 19. Exactly 7 words (one full line) produces exactly 1 line span
+	it('7 words (one line) produces exactly 1 line span', () => {
+		const el = makeElement(nWords(7))
+		const original = getCleanHTML(el)
+		applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 96], period: 2 })
+		const lines = el.querySelectorAll(`.${AXIS_RHYTHM_CLASSES.line}`)
+		expect(lines.length).toBe(1)
+	})
 })
