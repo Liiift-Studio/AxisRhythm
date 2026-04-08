@@ -17,7 +17,7 @@
 }
 
 :root {
-	--background: hsl(0,   55%, 10%); /* hue 0° */
+	--background: hsl(0,   55%, 10%); /* hue 0° */ /* hue 0° */
 	--foreground: #f0ece3;
 	--btn-bg: hsl(0,   35%, 18%);
 	--font-sans: sans-serif;
