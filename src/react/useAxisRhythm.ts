@@ -13,7 +13,7 @@ export function useAxisRhythm(options: AxisRhythmOptions) {
 	const optionsRef = useRef(options)
 	optionsRef.current = options
 
-	const { axis, values, period, align } = options
+	const { axis, values, period, align, lineDetection } = options
 	const v0 = values?.[0]
 	const v1 = values?.[1]
 
@@ -24,7 +24,7 @@ export function useAxisRhythm(options: AxisRhythmOptions) {
 			originalHTMLRef.current = getCleanHTML(el)
 		}
 		applyAxisRhythm(el, originalHTMLRef.current, optionsRef.current)
-	}, [axis, v0, v1, period, align])
+	}, [axis, v0, v1, period, align, lineDetection])
 
 	useLayoutEffect(() => {
 		run()

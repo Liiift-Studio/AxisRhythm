@@ -1,12 +1,88 @@
 // axis-rhythm/src/core/adjust.ts — framework-agnostic axis-rhythm algorithm
 import { AXIS_RHYTHM_CLASSES, type AxisRhythmOptions } from './types'
 
+// ─── Pretext (canvas line detection) ─────────────────────────────────────────
+
+/** Minimal surface of @chenglou/pretext that we use */
+type PretextModule = {
+	prepareWithSegments: (text: string, font: string) => unknown
+	layoutWithLines: (prepared: unknown, maxWidth: number, lineHeight: number) => { lines: { text: string }[] }
+}
+
+let _pretext: PretextModule | null = null
+let _pretextLoading = false
+
+/**
+ * Kick off a one-time background import of @chenglou/pretext.
+ * No-ops if already loading or loaded. Falls back silently if not installed.
+ */
+function tryLoadPretext(): void {
+	if (_pretext !== null || _pretextLoading) return
+	_pretextLoading = true
+	import('@chenglou/pretext' as string)
+		.then((m) => { _pretext = m as PretextModule })
+		.catch(() => {
+			console.warn('[axisrhythm] canvas lineDetection requires @chenglou/pretext — falling back to BCR')
+		})
+}
+
+/** Cache: per-element pretext prepared object, keyed by originalHTML to invalidate on content change */
+type PreparedEntry = { originalHTML: string; prepared: unknown }
+const pretextCache = new WeakMap<HTMLElement, PreparedEntry>()
+
+/** Build the canvas-compatible font string from an element's computed style */
+function getCanvasFont(el: HTMLElement): string {
+	const s = getComputedStyle(el)
+	const family = s.fontFamily.split(',')[0].replace(/['"]/g, '').trim()
+	return `${s.fontWeight} ${s.fontSize} ${family}`
+}
+
+/** Get the computed line height in px, falling back to fontSize × 1.2 */
+function getLineHeightPx(el: HTMLElement): number {
+	const s = getComputedStyle(el)
+	const lh = parseFloat(s.lineHeight)
+	return isNaN(lh) ? parseFloat(s.fontSize) * 1.2 : lh
+}
+
+/**
+ * Assign word spans to line groups using pretext's line texts.
+ * Accumulates span text content until it matches each line's text, in order.
+ * Any trailing spans (from text normalisation differences) are appended to the last group.
+ */
+function groupSpansByPretext(
+	wordSpans: HTMLElement[],
+	lines: { text: string }[],
+): HTMLElement[][] {
+	const groups: HTMLElement[][] = lines.map(() => [])
+	let si = 0
+
+	for (let li = 0; li < lines.length && si < wordSpans.length; li++) {
+		const target = lines[li].text.replace(/\s+/g, ' ').trim()
+		let acc = ''
+		while (si < wordSpans.length) {
+			const word = (wordSpans[si].textContent ?? '').replace(/\s+/g, ' ').trim()
+			acc = acc ? acc + ' ' + word : word
+			groups[li].push(wordSpans[si])
+			si++
+			if (acc === target) break
+		}
+	}
+
+	// Fallback: attach any remaining spans to the last group
+	while (si < wordSpans.length) {
+		groups[groups.length - 1]?.push(wordSpans[si++])
+	}
+
+	return groups
+}
+
 /** Resolved defaults applied when options are omitted */
 const DEFAULTS: Required<AxisRhythmOptions> = {
 	axis: 'wdth',
 	values: [100, 96],
 	period: 2,
 	align: 'top',
+	lineDetection: 'bcr',
 }
 
 /**
@@ -73,6 +149,10 @@ export function applyAxisRhythm(
 	const values = options.values ?? DEFAULTS.values
 	const period = Math.max(1, Math.round(options.period ?? DEFAULTS.period))
 	const align = options.align ?? DEFAULTS.align
+	const lineDetection = options.lineDetection ?? 'bcr'
+
+	// Kick off pretext background load when canvas mode is requested
+	if (lineDetection === 'canvas') tryLoadPretext()
 
 	// --- Pass 1: Reset ---
 	element.innerHTML = originalHTML
@@ -130,29 +210,60 @@ export function applyAxisRhythm(
 		return
 	}
 
-	// --- Pass 3: Read phase — measure line positions ---
-	// Set display:inline-block so getBoundingClientRect().top gives the line's y position.
-	wordSpans.forEach((span) => {
-		span.style.display = 'inline-block'
-		span.style.whiteSpace = 'nowrap'
-	})
+	// --- Pass 3: Line grouping ---
+	// Two paths: canvas (pretext arithmetic) or bcr (getBoundingClientRect).
+	// Canvas path: reuses cached segment widths on resize — no forced reflow.
+	// BCR path: reads actual browser layout — ground truth, always accurate.
 
-	// Group consecutive word spans that share the same rounded top value into lines.
-	// All reads are batched here before any writes.
 	interface LineGroup {
 		spans: HTMLElement[]
 		top: number
 	}
 	const lineGroups: LineGroup[] = []
-	let currentGroup: LineGroup | null = null
 
-	for (const span of wordSpans) {
-		const top = Math.round(span.getBoundingClientRect().top)
-		if (currentGroup === null || top !== currentGroup.top) {
-			currentGroup = { spans: [], top }
-			lineGroups.push(currentGroup)
+	const useCanvas = lineDetection === 'canvas' && _pretext !== null
+
+	if (useCanvas) {
+		// --- Canvas path (pretext) ---
+		// Get or compute the prepared segment widths for this element's text.
+		const cached = pretextCache.get(element)
+		let prepared: unknown
+		if (cached && cached.originalHTML === originalHTML) {
+			prepared = cached.prepared
+		} else {
+			prepared = _pretext!.prepareWithSegments(
+				element.textContent ?? '',
+				getCanvasFont(element),
+			)
+			pretextCache.set(element, { originalHTML, prepared })
 		}
-		currentGroup.spans.push(span)
+
+		const maxWidth = element.offsetWidth
+		const lineHeight = getLineHeightPx(element)
+		const { lines } = _pretext!.layoutWithLines(prepared, maxWidth, lineHeight)
+
+		// Map pretext line texts back to word spans.
+		const grouped = groupSpansByPretext(wordSpans, lines)
+		grouped.forEach((spans, i) => {
+			lineGroups.push({ spans, top: i }) // top is synthetic — only used as identity key
+		})
+	} else {
+		// --- BCR path (default) ---
+		// Force inline-block so getBoundingClientRect().top identifies the visual row.
+		wordSpans.forEach((span) => {
+			span.style.display = 'inline-block'
+			span.style.whiteSpace = 'nowrap'
+		})
+
+		let currentGroup: LineGroup | null = null
+		for (const span of wordSpans) {
+			const top = Math.round(span.getBoundingClientRect().top)
+			if (currentGroup === null || top !== currentGroup.top) {
+				currentGroup = { spans: [], top }
+				lineGroups.push(currentGroup)
+			}
+			currentGroup.spans.push(span)
+		}
 	}
 
 	const totalLines = lineGroups.length
