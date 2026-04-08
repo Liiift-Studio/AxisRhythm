@@ -51,8 +51,8 @@ function BeforeAfterToggle({ active, onClick }: { active: boolean; onClick: () =
 
 export default function Demo() {
 	const [axis, setAxis] = useState<AxisKey>('wdth')
-	const [valueHigh, setValueHigh] = useState(AXIS_CONFIG.wdth.defaultHigh)
-	const [valueLow, setValueLow] = useState(AXIS_CONFIG.wdth.defaultLow)
+	const [valueHigh, setValueHigh] = useState<number>(AXIS_CONFIG.wdth.defaultHigh)
+	const [valueLow, setValueLow] = useState<number>(AXIS_CONFIG.wdth.defaultLow)
 	const [period, setPeriod] = useState(2)
 	const [align, setAlign] = useState<'top' | 'bottom'>('top')
 	const [beforeAfter, setComparing] = useState(false)
