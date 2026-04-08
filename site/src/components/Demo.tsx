@@ -53,13 +53,11 @@ export default function Demo() {
 	const [axis, setAxis] = useState<AxisKey>('wght')
 	const [valueHigh, setValueHigh] = useState<number>(AXIS_CONFIG.wght.defaultHigh)
 	const [valueLow, setValueLow] = useState<number>(AXIS_CONFIG.wght.defaultLow)
-	const [period, setPeriod] = useState(2)
 	const [align, setAlign] = useState<'top' | 'bottom'>('top')
 	const [beforeAfter, setComparing] = useState(false)
 
 	const dValueHigh = useDeferredValue(valueHigh)
 	const dValueLow = useDeferredValue(valueLow)
-	const dPeriod = useDeferredValue(period)
 
 	const cfg = AXIS_CONFIG[axis]
 
@@ -77,10 +75,9 @@ export default function Demo() {
 
 	return (
 		<div className="w-full" style={{ overflow: 'hidden' }}>
-			<div className="grid grid-cols-2 sm:grid-cols-3 gap-6 mb-6">
+			<div className="grid grid-cols-2 gap-6 mb-6">
 				<Slider label="Axis High" value={valueHigh} min={cfg.min} max={cfg.max} step={cfg.step} onChange={setValueHigh} />
 				<Slider label="Axis Low" value={valueLow} min={cfg.min} max={cfg.max} step={cfg.step} onChange={setValueLow} />
-				<Slider label="Period" value={period} min={2} max={6} step={1} onChange={setPeriod} />
 			</div>
 			<div className="flex flex-wrap items-center gap-3 mb-8">
 				<span className="text-xs uppercase tracking-widest opacity-50">Axis</span>
@@ -93,7 +90,7 @@ export default function Demo() {
 				))}
 			</div>
 			<div className="relative pb-8">
-				<AxisRhythmText axis={axis} values={[dValueHigh, dValueLow]} period={dPeriod} align={align} style={sampleStyle}>
+				<AxisRhythmText axis={axis} values={[dValueHigh, dValueLow]} period={2} align={align} style={sampleStyle}>
 					{SAMPLE}
 				</AxisRhythmText>
 				{beforeAfter && (

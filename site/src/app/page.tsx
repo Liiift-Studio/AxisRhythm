@@ -76,10 +76,10 @@ const ref = useAxisRhythm({ axis: 'wdth', values: [100, 88], period: 2 })
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="opacity-50">Vanilla JS</p>
-						<CodeBlock code={`import { applyAxisRhythm } from '@liiift-studio/axisrhythm'
+						<CodeBlock code={`import { applyAxisRhythm, getCleanHTML } from '@liiift-studio/axisrhythm'
 
 const el = document.querySelector('p')
-const original = el.innerHTML
+const original = getCleanHTML(el)
 applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 88], period: 2 })`} />
 					</div>
 					<div className="flex flex-col gap-3">

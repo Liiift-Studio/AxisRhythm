@@ -58,6 +58,13 @@ export function applyAxisRhythm(
 ): void {
 	if (typeof window === 'undefined') return
 
+	// The axis alternation is a decorative typographic effect — skip it entirely
+	// when the user has requested reduced motion.
+	if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+		element.innerHTML = originalHTML
+		return
+	}
+
 	// Save scroll position — iOS Safari does not support overflow-anchor: none
 	const scrollY = window.scrollY
 
