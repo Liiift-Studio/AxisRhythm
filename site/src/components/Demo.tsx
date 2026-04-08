@@ -50,9 +50,9 @@ function BeforeAfterToggle({ active, onClick }: { active: boolean; onClick: () =
 }
 
 export default function Demo() {
-	const [axis, setAxis] = useState<AxisKey>('wdth')
-	const [valueHigh, setValueHigh] = useState<number>(AXIS_CONFIG.wdth.defaultHigh)
-	const [valueLow, setValueLow] = useState<number>(AXIS_CONFIG.wdth.defaultLow)
+	const [axis, setAxis] = useState<AxisKey>('wght')
+	const [valueHigh, setValueHigh] = useState<number>(AXIS_CONFIG.wght.defaultHigh)
+	const [valueLow, setValueLow] = useState<number>(AXIS_CONFIG.wght.defaultLow)
 	const [period, setPeriod] = useState(2)
 	const [align, setAlign] = useState<'top' | 'bottom'>('top')
 	const [beforeAfter, setComparing] = useState(false)
@@ -76,7 +76,7 @@ export default function Demo() {
 	}
 
 	return (
-		<div className="w-full">
+		<div className="w-full" style={{ overflow: 'hidden' }}>
 			<div className="grid grid-cols-2 sm:grid-cols-3 gap-6 mb-6">
 				<Slider label="Axis High" value={valueHigh} min={cfg.min} max={cfg.max} step={cfg.step} onChange={setValueHigh} />
 				<Slider label="Axis Low" value={valueLow} min={cfg.min} max={cfg.max} step={cfg.step} onChange={setValueLow} />
@@ -92,7 +92,7 @@ export default function Demo() {
 					<button key={v} onClick={() => setAlign(v)} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: align === v ? 1 : 0.5, background: align === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
 				))}
 			</div>
-			<div className="relative pb-8" style={{ overflow: 'hidden' }}>
+			<div className="relative pb-8">
 				<AxisRhythmText axis={axis} values={[dValueHigh, dValueLow]} period={dPeriod} align={align} style={sampleStyle}>
 					{SAMPLE}
 				</AxisRhythmText>
