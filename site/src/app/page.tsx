@@ -1,6 +1,7 @@
 import Demo from "@/components/Demo"
 import CopyInstall from "@/components/CopyInstall"
 import CodeBlock from "@/components/CodeBlock"
+import ToolDirectory from "@/components/ToolDirectory"
 import { version } from "../../../package.json"
 
 export default function Home() {
@@ -97,9 +98,12 @@ applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 88], period: 2 })`} 
 			</section>
 
 			{/* Footer */}
-			<footer className="w-full max-w-2xl lg:max-w-5xl flex justify-between text-xs opacity-50 pt-8 border-t border-white/10">
-				<span>axis-rhythm v{version}</span>
+			<footer className="w-full max-w-2xl lg:max-w-5xl flex flex-col gap-6 pt-8 border-t border-white/10 text-xs">
+				<ToolDirectory current="axisRhythm" />
+				<div className="flex justify-between opacity-50">
+				<span>axisRhythm v{version}</span>
 				<a href="https://liiift.studio" target="_blank" rel="noopener noreferrer" className="hover:opacity-100 transition-opacity">Liiift Studio</a>
+				</div>
 			</footer>
 
 		</main>
