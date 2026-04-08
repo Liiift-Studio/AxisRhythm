@@ -92,7 +92,7 @@ export default function Demo() {
 					<button key={v} onClick={() => setAlign(v)} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: align === v ? 1 : 0.5, background: align === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
 				))}
 			</div>
-			<div className="relative pb-8">
+			<div className="relative pb-8" style={{ overflow: 'hidden' }}>
 				<AxisRhythmText axis={axis} values={[dValueHigh, dValueLow]} period={dPeriod} align={align} style={sampleStyle}>
 					{SAMPLE}
 				</AxisRhythmText>
