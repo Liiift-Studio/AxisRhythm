@@ -1,57 +1,35 @@
-# axis-rhythm
+# Axis Rhythm
 
-> Deliberate variable font axis rhythm across paragraph lines — alternating wdth/wght values for typographic texture
+Per-line variable font axis alternation for the web. Cycle any OpenType axis (wdth, wght, opsz…) across paragraph lines to create typographic rhythm that reads as design, not noise.
 
-## Concept
+**[axisrhythm.com](https://axisrhythm.com)** · [npm](https://www.npmjs.com/package/@liiift-studio/axisrhythm) · [GitHub](https://github.com/Liiift-Studio/AxisRhythm)
 
-Lines in a paragraph alternate between two or more variable font axis states (e.g. wdth: 100 / wdth: 96). Not for readability — a typographic surface treatment. The equivalent of sawtooth rag but in the weight/width dimension rather than line-length.
+---
 
 ## Install
 
 ```bash
-npm install axis-rhythm
+npm install @liiift-studio/axisrhythm
 ```
 
 ## Usage
 
-### React
-
 ```tsx
-import { AxisRhythmText } from 'axis-rhythm'
+import { AxisRhythmText } from '@liiift-studio/axisrhythm'
 
-<AxisRhythmText>
-  Your paragraph text here.
+<AxisRhythmText axis="wdth" values={[100, 88]} period={2}>
+  Your paragraph text here...
 </AxisRhythmText>
 ```
 
-### Vanilla JS
-
-```ts
-import { applyAxisRhythm, getCleanHTML } from 'axis-rhythm'
-
-const el = document.querySelector('p')
-const original = getCleanHTML(el)
-applyAxisRhythm(el, original, { /* options */ })
-```
-
-## Options
-
-| Option | Description |
-|--------|-------------|
-| `axis` | which axis: 'wdth' | 'wght' | string |
-| `values` | axis values to cycle, e.g. [100, 96] |
-| `period` | lines per cycle, default 2 |
-| `align` | 'top' | 'bottom' |
-
-## Development
-
-```bash
-npm install
-npm test
-npm run build
-```
+See [axisrhythm.com](https://axisrhythm.com) for full API docs and a live demo.
 
 ---
 
-Part of the [Liiift Studio](https://liiift.studio) typography tools family.
-See also: [Ragtooth](https://ragtooth.liiift.studio)
+## Dev notes
+
+### `next` in root devDependencies
+
+`package.json` at the repo root lists `next` as a devDependency. This is a **Vercel detection workaround** — not a real dependency of the npm package. Vercel's build system inspects the root `package.json` to detect the framework; without `next` present it falls back to a static build and skips the Next.js pipeline, breaking the `/site` subdirectory deploy.
+
+The package itself has zero runtime dependencies. Do not remove this entry.
