@@ -23,8 +23,8 @@ function Slider({ label, value, min, max, step, onChange }: { label: string; val
 	)
 }
 
-/** Split-circle before/after toggle — right half filled = effect on, left half outline = without */
-function CompareButton({ active, onClick }: { active: boolean; onClick: () => void }) {
+/** Before/after toggle — left half = without effect, right half filled = with effect */
+function BeforeAfterToggle({ active, onClick }: { active: boolean; onClick: () => void }) {
 	return (
 		<button
 			onClick={onClick}
@@ -40,10 +40,10 @@ function CompareButton({ active, onClick }: { active: boolean; onClick: () => vo
 				cursor: 'pointer', transition: 'opacity 0.15s ease',
 			}}
 		>
-			<svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-				<circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1"/>
-				<path d="M7 1.5 A5.5 5.5 0 0 1 7 12.5 Z" fill="currentColor"/>
-				<line x1="7" y1="1.5" x2="7" y2="12.5" stroke="currentColor" strokeWidth="0.75" opacity="0.5"/>
+			<svg width="14" height="10" viewBox="0 0 14 10" fill="none">
+				<rect x="0.5" y="0.5" width="13" height="9" rx="1" stroke="currentColor" strokeWidth="1"/>
+				<line x1="7" y1="0.5" x2="7" y2="9.5" stroke="currentColor" strokeWidth="1"/>
+				<rect x="8" y="1.5" width="5" height="7" fill="currentColor"/>
 			</svg>
 		</button>
 	)
@@ -55,7 +55,7 @@ export default function Demo() {
 	const [valueLow, setValueLow] = useState(AXIS_CONFIG.wdth.defaultLow)
 	const [period, setPeriod] = useState(2)
 	const [align, setAlign] = useState<'top' | 'bottom'>('top')
-	const [comparing, setComparing] = useState(false)
+	const [beforeAfter, setComparing] = useState(false)
 
 	const dValueHigh = useDeferredValue(valueHigh)
 	const dValueLow = useDeferredValue(valueLow)
@@ -96,10 +96,10 @@ export default function Demo() {
 				<AxisRhythmText axis={axis} values={[dValueHigh, dValueLow]} period={dPeriod} align={align} style={sampleStyle}>
 					{SAMPLE}
 				</AxisRhythmText>
-				{comparing && (
+				{beforeAfter && (
 					<p aria-hidden style={{ ...sampleStyle, position: 'absolute', top: 0, left: 0, width: '100%', margin: 0, opacity: 0.25, pointerEvents: 'none' }}>{SAMPLE}</p>
 				)}
-				<CompareButton active={comparing} onClick={() => setComparing(v => !v)} />
+				<BeforeAfterToggle active={beforeAfter} onClick={() => setComparing(v => !v)} />
 			</div>
 			<p className="text-xs opacity-50 italic mt-6">Each line gets a different axis value. The paragraph reads as one.</p>
 		</div>
