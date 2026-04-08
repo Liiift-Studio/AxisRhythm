@@ -29,6 +29,7 @@ export default function Demo() {
 	const [valueLow, setValueLow] = useState(AXIS_CONFIG.wdth.defaultLow)
 	const [period, setPeriod] = useState(2)
 	const [align, setAlign] = useState<'top' | 'bottom'>('top')
+	const [comparing, setComparing] = useState(false)
 
 	const dValueHigh = useDeferredValue(valueHigh)
 	const dValueLow = useDeferredValue(valueLow)
@@ -38,7 +39,6 @@ export default function Demo() {
 
 	function handleAxisChange(next: AxisKey) {
 		setAxis(next)
-		// Reset values to sensible defaults for the new axis
 		setValueHigh(AXIS_CONFIG[next].defaultHigh)
 		setValueLow(AXIS_CONFIG[next].defaultLow)
 	}
@@ -65,19 +65,18 @@ export default function Demo() {
 				{(['top', 'bottom'] as const).map(v => (
 					<button key={v} onClick={() => setAlign(v)} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: align === v ? 1 : 0.5, background: align === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
 				))}
+				<span className="text-xs uppercase tracking-widest opacity-50 ml-4">Compare</span>
+				<button onClick={() => setComparing(v => !v)} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: comparing ? 1 : 0.5, background: comparing ? 'var(--btn-bg)' : 'transparent' }}>without</button>
 			</div>
-			<AxisRhythmText axis={axis} values={[dValueHigh, dValueLow]} period={dPeriod} align={align} style={sampleStyle}>
-				{SAMPLE}
-			</AxisRhythmText>
+			<div className="relative">
+				<AxisRhythmText axis={axis} values={[dValueHigh, dValueLow]} period={dPeriod} align={align} style={sampleStyle}>
+					{SAMPLE}
+				</AxisRhythmText>
+				{comparing && (
+					<p aria-hidden style={{ ...sampleStyle, position: 'absolute', top: 0, left: 0, width: '100%', margin: 0, opacity: 0.25, pointerEvents: 'none' }}>{SAMPLE}</p>
+				)}
+			</div>
 			<p className="text-xs opacity-50 italic mt-6">Each line gets a different axis value. The paragraph reads as one.</p>
-			<div className="flex justify-end mt-8">
-				<div className="w-72 flex flex-col gap-2">
-					<span className="text-xs uppercase tracking-widest opacity-50">without</span>
-					<div className="rounded-lg p-3" style={{ background: "rgba(0,0,0,0.15)" }}>
-						<p style={{ ...sampleStyle, fontSize: "0.7rem", lineHeight: "1.8" }} className="opacity-60">{SAMPLE}</p>
-					</div>
-				</div>
-			</div>
 		</div>
 	)
 }
