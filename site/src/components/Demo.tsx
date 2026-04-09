@@ -3,7 +3,11 @@
 import { useState, useDeferredValue } from "react"
 import { AxisRhythmText } from "@liiift-studio/axisrhythm"
 
-const SAMPLE = `Typography has always been as much about texture as legibility. The even grey of a well-set paragraph — called its colour by compositors — depends on consistency: consistent spacing, consistent weight, consistent rhythm from line to line. Variable fonts crack this open. The wdth axis can compress or expand a letterform; the wght axis can lighten or darken it; the opsz axis can adjust optical weight for the point size. Applied uniformly, these give you a different typeface. Applied line by line, they give you something more interesting: a paragraph with rhythm. Each line carries a different setting but the text reads as one. The difference is a texture the eye feels before the mind names it.`
+const PARAGRAPHS = [
+	`Typography has always been as much about texture as legibility. The even grey of a well-set paragraph — called its colour by compositors — depends on consistency: consistent spacing, consistent weight, consistent rhythm from line to line.`,
+	`Variable fonts crack this open. The wdth axis can compress or expand a letterform; the wght axis can lighten or darken it; the opsz axis can adjust optical weight for the point size. Applied uniformly, these give you a different typeface.`,
+	`Applied line by line, they give you something more interesting: a paragraph with rhythm. Each line carries a different setting but the text reads as one. The difference is a texture the eye feels before the mind names it.`,
+]
 
 /** Per-axis slider config: range and sensible defaults */
 const AXIS_CONFIG = {
@@ -91,11 +95,19 @@ export default function Demo() {
 				))}
 			</div>
 			<div className="relative pb-8">
-				<AxisRhythmText axis={axis} values={[dValueHigh, dValueLow]} period={2} align={align} style={sampleStyle}>
-					{SAMPLE}
-				</AxisRhythmText>
+				<div className="flex flex-col gap-8">
+					{PARAGRAPHS.map((para, i) => (
+						<AxisRhythmText key={i} axis={axis} values={[dValueHigh, dValueLow]} period={2} align={align} style={sampleStyle}>
+							{para}
+						</AxisRhythmText>
+					))}
+				</div>
 				{beforeAfter && (
-					<p aria-hidden style={{ ...sampleStyle, position: 'absolute', top: 0, left: 0, width: '100%', margin: 0, opacity: 0.25, pointerEvents: 'none' }}>{SAMPLE}</p>
+					<div aria-hidden style={{ position: 'absolute', top: 0, left: 0, width: '100%', pointerEvents: 'none', opacity: 0.25 }} className="flex flex-col gap-8">
+						{PARAGRAPHS.map((para, i) => (
+							<p key={i} style={{ ...sampleStyle, margin: 0 }}>{para}</p>
+						))}
+					</div>
 				)}
 				<BeforeAfterToggle active={beforeAfter} onClick={() => setComparing(v => !v)} />
 			</div>
