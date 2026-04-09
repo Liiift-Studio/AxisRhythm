@@ -71,5 +71,8 @@
 	"bugs": {
 		"url": "https://github.com/Liiift-Studio/AxisRhythm/issues"
 	},
-	"sideEffects": false
+	"sideEffects": false,
+	"publishConfig": {
+		"access": "public"
+	}
 }
