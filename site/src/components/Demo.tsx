@@ -2,6 +2,9 @@
 
 import { useState, useDeferredValue } from "react"
 import { AxisRhythmText } from "@liiift-studio/axisrhythm"
+import type { AxisRhythmOptions } from "@liiift-studio/axisrhythm"
+
+type LinePreservation = NonNullable<AxisRhythmOptions['linePreservation']>
 
 const PARAGRAPHS = [
 	`Typography has always been as much about texture as legibility. The even grey of a well-set paragraph — called its colour by compositors — depends on consistency: consistent spacing, consistent weight, consistent rhythm from line to line.`,
@@ -58,6 +61,7 @@ export default function Demo() {
 	const [valueHigh, setValueHigh] = useState<number>(AXIS_CONFIG.wght.defaultHigh)
 	const [valueLow, setValueLow] = useState<number>(AXIS_CONFIG.wght.defaultLow)
 	const [align, setAlign] = useState<'top' | 'bottom'>('top')
+	const [linePreservation, setLinePreservation] = useState<LinePreservation>('none')
 	const [beforeAfter, setComparing] = useState(false)
 
 	const dValueHigh = useDeferredValue(valueHigh)
@@ -93,11 +97,15 @@ export default function Demo() {
 				{(['top', 'bottom'] as const).map(v => (
 					<button key={v} onClick={() => setAlign(v)} aria-pressed={align === v} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: align === v ? 1 : 0.5, background: align === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
 				))}
+				<span className="text-xs uppercase tracking-widest opacity-50 ml-4">Preserve</span>
+				{(['none', 'spacing', 'scale'] as const).map(v => (
+					<button key={v} onClick={() => setLinePreservation(v)} aria-pressed={linePreservation === v} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: linePreservation === v ? 1 : 0.5, background: linePreservation === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
+				))}
 			</div>
 			<div className="relative pb-8">
 				<div className="flex flex-col gap-8">
 					{PARAGRAPHS.map((para, i) => (
-						<AxisRhythmText key={i} axis={axis} values={[dValueHigh, dValueLow]} period={2} align={align} style={sampleStyle}>
+						<AxisRhythmText key={i} axis={axis} values={[dValueHigh, dValueLow]} period={2} align={align} linePreservation={linePreservation} style={sampleStyle}>
 							{para}
 						</AxisRhythmText>
 					))}
@@ -111,7 +119,7 @@ export default function Demo() {
 				)}
 				<BeforeAfterToggle active={beforeAfter} onClick={() => setComparing(v => !v)} />
 			</div>
-			<p className="text-xs opacity-50 italic mt-8" style={{ lineHeight: "1.8" }}>Each line gets a different axis value. The paragraph reads as one.</p>
+			<p className="text-xs opacity-50 italic mt-8" style={{ lineHeight: "1.8" }}>Each line gets a different axis value. The paragraph reads as one — like column highlighting for text. The alternation gives the eye a subtle landmark on every line, so it can track its position and find the start of the next without losing its place.</p>
 		</div>
 	)
 }

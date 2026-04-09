@@ -24,6 +24,24 @@ export interface AxisRhythmOptions {
 	 *   (canvas resolves to a different optical variant on macOS).
 	 */
 	lineDetection?: 'bcr' | 'canvas'
+	/**
+	 * Line length preservation strategy. Default: 'none'
+	 *
+	 * Controls how axis-rhythm compensates for the width changes that result from
+	 * applying different axis values per line.
+	 *
+	 * - **'none'** (default) — no compensation. Lines may reflow when the axis alters
+	 *   character widths (e.g. wdth or wght). Most visible at wide value ranges.
+	 *
+	 * - **'spacing'** — adjusts letter-spacing per line to match each line's natural
+	 *   (un-modified) width. Preserves glyph shapes; the axis difference is visible
+	 *   in weight/form but line endings stay fixed. Requires two BCR read passes.
+	 *
+	 * - **'scale'** — applies a CSS scaleX transform per line so each line visually
+	 *   fits its natural width. GPU-composited, no letter-spacing changes. Slightly
+	 *   alters horizontal glyph proportions at large axis ranges.
+	 */
+	linePreservation?: 'none' | 'spacing' | 'scale'
 }
 
 /** CSS class names injected by axis-rhythm — use these to target generated markup */

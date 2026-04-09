@@ -83,6 +83,7 @@ const DEFAULTS: Required<AxisRhythmOptions> = {
 	period: 2,
 	align: 'top',
 	lineDetection: 'bcr',
+	linePreservation: 'none',
 }
 
 /**
@@ -151,6 +152,7 @@ export function applyAxisRhythm(
 	const period = Math.max(1, Math.round(options.period ?? DEFAULTS.period))
 	const align = options.align ?? DEFAULTS.align
 	const lineDetection = options.lineDetection ?? 'bcr'
+	const linePreservation = options.linePreservation ?? DEFAULTS.linePreservation
 
 	// Kick off pretext background load when canvas mode is requested
 	if (lineDetection === 'canvas') tryLoadPretext()
@@ -269,26 +271,25 @@ export function applyAxisRhythm(
 
 	const totalLines = lineGroups.length
 
-	// --- Pass 4: Write phase — wrap lines and apply axis values ---
-	// Build a document fragment to replace element.innerHTML with line wrappers.
-	// We walk the original DOM structure, replacing word spans with line wrappers + <br>.
-	// Strategy: collect the line HTML segments, then reassemble.
+	// --- Pass 4: Write phase — wrap lines (no axis value yet) ---
+	// Build line spans and insert into DOM before measuring widths.
+	// axis values are applied in Pass 5 so we can read natural widths first.
 
-	// For each line group, determine the axis value based on cyclePos.
+	// Computed axis value per line (stored for use in Pass 5).
+	const lineAxisValues: number[] = []
 	const lineElements: HTMLElement[] = []
 
 	lineGroups.forEach((group, lineIndex) => {
 		const cyclePos = align === 'bottom'
 			? (totalLines - 1 - lineIndex) % period
 			: lineIndex % period
-		const axisValue = values[cyclePos % values.length]
+		lineAxisValues.push(values[cyclePos % values.length])
 
-		// Create the line wrapper span.
+		// Create the line wrapper span — no fontVariationSettings yet.
 		const lineSpan = document.createElement('span')
 		lineSpan.className = AXIS_RHYTHM_CLASSES.line
 		lineSpan.style.display = 'inline-block'
 		lineSpan.style.whiteSpace = 'nowrap'
-		lineSpan.style.fontVariationSettings = `'${axis}' ${axisValue}`
 
 		// Move word spans into the line span, unwrapping them (keeping text content).
 		// We preserve inline element ancestry by rebuilding the structure.
@@ -323,9 +324,8 @@ export function applyAxisRhythm(
 		lineElements.push(lineSpan)
 	})
 
-	// Now replace the element's content with the line spans, separated by <br>.
-	// We reset innerHTML to originalHTML first (already done in Pass 1), then
-	// clear it and insert our constructed line elements.
+	// Insert line spans into the live DOM, separated by <br>.
+	// Spans are now measurable but inherit axis values from the parent element.
 	element.innerHTML = ''
 
 	lineElements.forEach((lineEl, i) => {
@@ -337,7 +337,54 @@ export function applyAxisRhythm(
 		}
 	})
 
-	// --- Pass 5: Restore scroll via rAF ---
+	// --- Pass 5: Apply axis values + optional line-length preservation ---
+	if (linePreservation === 'none') {
+		// Simple path: apply axis variation directly.
+		lineElements.forEach((el, i) => {
+			el.style.fontVariationSettings = `'${axis}' ${lineAxisValues[i]}`
+		})
+	} else {
+		// Preservation path: measure natural widths before applying axis values,
+		// then apply compensation (letter-spacing or scaleX) to keep line lengths stable.
+
+		// Batch read 1: natural widths (spans inherit parent's fontVariationSettings).
+		const naturalWidths = lineElements.map(el => el.getBoundingClientRect().width)
+
+		// Apply axis values to all spans.
+		lineElements.forEach((el, i) => {
+			el.style.fontVariationSettings = `'${axis}' ${lineAxisValues[i]}`
+		})
+
+		// Batch read 2: widths after axis application.
+		const axisWidths = lineElements.map(el => el.getBoundingClientRect().width)
+
+		if (linePreservation === 'spacing') {
+			// Adjust letter-spacing per line so the total advance width matches
+			// the natural (un-modified) width. Same technique as HoverBoldly.
+			lineElements.forEach((el, i) => {
+				const delta = naturalWidths[i] - axisWidths[i]
+				const charCount = (el.textContent ?? '').length
+				if (charCount > 0) {
+					const fontSize = parseFloat(getComputedStyle(el).fontSize)
+					el.style.letterSpacing = fontSize > 0
+						? `${(delta / charCount) / fontSize}em`
+						: ''
+				}
+			})
+		} else if (linePreservation === 'scale') {
+			// Apply a scaleX transform so each line visually occupies its natural width.
+			// The explicit width constrains the layout box; the transform scales content within it.
+			lineElements.forEach((el, i) => {
+				if (axisWidths[i] > 0 && naturalWidths[i] > 0) {
+					el.style.width = `${naturalWidths[i]}px`
+					el.style.transform = `scaleX(${(naturalWidths[i] / axisWidths[i]).toFixed(6)})`
+					el.style.transformOrigin = 'left center'
+				}
+			})
+		}
+	}
+
+	// --- Pass 6: Restore scroll via rAF ---
 	requestAnimationFrame(() => {
 		if (Math.abs(window.scrollY - scrollY) > 2) {
 			window.scrollTo({ top: scrollY, behavior: 'instant' })

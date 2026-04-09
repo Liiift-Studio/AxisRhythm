@@ -49,6 +49,14 @@ export default function Home() {
 						<p className="font-semibold opacity-100 text-base">Axis Rhythm works line by line</p>
 						<p>The algorithm detects visual lines using glyph positions, then wraps each in a span with its own font-variation-settings. Resize, reflow, inline elements — all handled automatically.</p>
 					</div>
+					<div className="flex flex-col gap-3">
+						<p className="font-semibold opacity-100 text-base">It aids reading</p>
+						<p>Alternating axis values create a subtle visual banding across the paragraph — like column highlighting in a spreadsheet, but for text. The eye uses the variation as a landmark: each line has a slightly different texture, so you always know which line you&apos;re on and where the next one begins.</p>
+					</div>
+					<div className="flex flex-col gap-3">
+						<p className="font-semibold opacity-100 text-base">Line length preservation</p>
+						<p>The <code className="text-xs font-mono">linePreservation</code> option prevents reflow when the axis changes character widths. <code className="text-xs font-mono">&apos;spacing&apos;</code> compensates with letter-spacing per line — exact widths, no glyph distortion. <code className="text-xs font-mono">&apos;scale&apos;</code> uses a GPU scaleX transform — faster, minor horizontal compression at large ranges.</p>
+					</div>
 				</div>
 			</section>
 
@@ -92,6 +100,7 @@ applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 88], period: 2 })`} 
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">period</td><td className="py-2 pr-6">2</td><td className="py-2">Lines per cycle.</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">align</td><td className="py-2 pr-6">'top'</td><td className="py-2">'top' counts from first line, 'bottom' from last.</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">lineDetection</td><td className="py-2 pr-6">&apos;bcr&apos;</td><td className="py-2">&apos;bcr&apos; reads actual browser layout — ground truth, works with any font and inline HTML. &apos;canvas&apos; uses <a href="https://github.com/chenglou/pretext" className="underline opacity-70">@chenglou/pretext</a> for arithmetic line breaking with no forced reflow on resize. Install pretext separately.</td></tr>
+								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">linePreservation</td><td className="py-2 pr-6">&apos;none&apos;</td><td className="py-2">&apos;none&apos; — no compensation. &apos;spacing&apos; — adjusts letter-spacing per line to match natural line widths; prevents reflow. &apos;scale&apos; — applies a CSS scaleX transform per line; GPU-composited, no letter-spacing change.</td></tr>
 								<tr className="border-t border-white/10 hover:bg-white/5 transition-colors"><td className="py-2 pr-6 font-mono">as</td><td className="py-2 pr-6">&apos;p&apos;</td><td className="py-2">HTML element to render, e.g. &apos;h1&apos;, &apos;div&apos;, &apos;li&apos;. Accepts any valid React element type. (AxisRhythmText only)</td></tr>
 							</tbody>
 						</table>
