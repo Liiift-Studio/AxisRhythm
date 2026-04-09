@@ -29,6 +29,8 @@ export function useAxisRhythm(options: AxisRhythmOptions) {
 	useLayoutEffect(() => {
 		run()
 
+		if (typeof ResizeObserver === 'undefined') return
+
 		let lastWidth = 0
 		let rafId = 0
 		const ro = new ResizeObserver((entries) => {
