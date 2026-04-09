@@ -104,7 +104,7 @@ applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 88], period: 2 })`} 
 				<ToolDirectory current="axisRhythm" />
 				<div className="flex justify-between opacity-50">
 				<span>axisRhythm v{version}</span>
-				<a href="https://liiift.studio" className="hover:opacity-100 transition-opacity">Liiift Studio</a>
+				<a href="https://liiift.studio" className="hover:opacity-100 transition-opacity"><img src="/logo-white.png" alt="Liiift Studio" style={{ height: 18, display: 'block' }} /></a>
 				</div>
 			</footer>
 
