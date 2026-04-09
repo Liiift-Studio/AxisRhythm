@@ -102,9 +102,10 @@ applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 88], period: 2 })`} 
 			{/* Footer */}
 			<footer className="w-full max-w-2xl lg:max-w-5xl flex flex-col gap-6 pt-8 border-t border-white/10 text-xs">
 				<ToolDirectory current="axisRhythm" />
-				<div className="flex justify-between opacity-50">
-				<span>axisRhythm v{version}</span>
-				<a href="https://liiift.studio" className="hover:opacity-100 transition-opacity"><img src="/logo-white.png" alt="Liiift Studio" style={{ height: 18, display: 'block' }} /></a>
+				<hr className="border-white/10" />
+				<div className="grid grid-cols-2 sm:grid-cols-4 gap-x-8 opacity-50">
+					<a href="https://liiift.studio" className="hover:opacity-100 transition-opacity"><img src="/logo-white.png" alt="Liiift Studio" style={{ height: 18, display: 'block' }} /></a>
+					<span className="sm:col-start-4">axisRhythm v{version}</span>
 				</div>
 			</footer>
 
