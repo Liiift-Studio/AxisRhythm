@@ -40,7 +40,7 @@ export default function Home() {
 			{/* Explanation */}
 			<section className="w-full max-w-2xl lg:max-w-5xl flex flex-col gap-6">
 				<p className="text-xs uppercase tracking-widest opacity-50">How it works</p>
-				<div className="grid grid-cols-1 sm:grid-cols-2 gap-12 text-sm leading-relaxed opacity-70">
+				<div className="prose-grid grid grid-cols-1 sm:grid-cols-2 gap-12 text-sm leading-relaxed opacity-70">
 					<div className="flex flex-col gap-3">
 						<p className="font-semibold opacity-100 text-base">CSS stops at the element</p>
 						<p>font-variation-settings applies a single setting to an entire element. Every line gets the same axis value. There&apos;s no way to target individual lines — they&apos;re not DOM nodes.</p>
