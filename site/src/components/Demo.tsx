@@ -61,7 +61,7 @@ export default function Demo() {
 	const [valueHigh, setValueHigh] = useState<number>(AXIS_CONFIG.wght.defaultHigh)
 	const [valueLow, setValueLow] = useState<number>(AXIS_CONFIG.wght.defaultLow)
 	const [align, setAlign] = useState<'top' | 'bottom'>('top')
-	const [linePreservation, setLinePreservation] = useState<LinePreservation>('none')
+	const [linePreservation, setLinePreservation] = useState<LinePreservation>('spacing')
 	const [beforeAfter, setComparing] = useState(false)
 
 	const dValueHigh = useDeferredValue(valueHigh)
