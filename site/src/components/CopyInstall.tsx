@@ -4,7 +4,7 @@
 import { useState } from "react"
 
 const CMD = "npm install @liiift-studio/axisrhythm"
-const NPM_URL = "https://www.npmjs.com/package/axis-rhythm"
+const NPM_URL = "https://www.npmjs.com/package/@liiift-studio/axisrhythm"
 
 /** Displays the install command, copies it to clipboard on click, and links to npm */
 export default function CopyInstall() {
