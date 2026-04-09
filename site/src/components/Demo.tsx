@@ -98,7 +98,7 @@ export default function Demo() {
 				)}
 				<BeforeAfterToggle active={beforeAfter} onClick={() => setComparing(v => !v)} />
 			</div>
-			<p className="text-xs opacity-50 italic mt-6">Each line gets a different axis value. The paragraph reads as one.</p>
+			<p className="text-xs opacity-50 italic mt-8" style={{ lineHeight: "1.8" }}>Each line gets a different axis value. The paragraph reads as one.</p>
 		</div>
 	)
 }
