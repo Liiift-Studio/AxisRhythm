@@ -147,6 +147,7 @@ export function applyAxisRhythm(
 	// Resolve options against defaults.
 	const axis = options.axis ?? DEFAULTS.axis
 	const values = options.values ?? DEFAULTS.values
+	if (values.length === 0) return  // guard: empty values array would cause modulo-by-zero
 	const period = Math.max(1, Math.round(options.period ?? DEFAULTS.period))
 	const align = options.align ?? DEFAULTS.align
 	const lineDetection = options.lineDetection ?? 'bcr'
