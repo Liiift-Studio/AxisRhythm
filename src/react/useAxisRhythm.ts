@@ -1,5 +1,5 @@
 // axis-rhythm/src/react/useAxisRhythm.ts — React hook
-import { useCallback, useLayoutEffect, useRef } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { applyAxisRhythm, getCleanHTML } from '../core/adjust'
 import type { AxisRhythmOptions } from '../core/types'
 
@@ -45,6 +45,14 @@ export function useAxisRhythm(options: AxisRhythmOptions) {
 			ro.disconnect()
 			cancelAnimationFrame(rafId)
 		}
+	}, [run])
+
+	// Rerun after fonts finish loading — measurements taken before font-swap
+	// (font-display: swap) use the fallback font's widths and produce wrong
+	// letter-spacing or scaleX compensation. document.fonts.ready resolves once
+	// all @font-face rules have finished loading.
+	useEffect(() => {
+		document.fonts.ready.then(run)
 	}, [run])
 
 	return ref

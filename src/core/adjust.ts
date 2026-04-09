@@ -76,6 +76,21 @@ function groupSpansByPretext(
 	return groups
 }
 
+/**
+ * Override a single axis value inside a font-variation-settings string,
+ * preserving all other axis values. Adds the axis if it is not already present.
+ *
+ * e.g. overrideAxis('"wght" 300, "opsz" 18', 'wght', 700) → '"wght" 700, "opsz" 18'
+ */
+function overrideAxis(baseFVS: string, axis: string, value: number): string {
+	if (!baseFVS || baseFVS === 'normal') return `"${axis}" ${value}`
+	const pattern = new RegExp(`(["'])${axis}\\1\\s+[\\d.eE+-]+`)
+	const replacement = `"${axis}" ${value}`
+	return pattern.test(baseFVS)
+		? baseFVS.replace(pattern, replacement)
+		: `${baseFVS}, ${replacement}`
+}
+
 /** Resolved defaults applied when options are omitted */
 const DEFAULTS: Required<AxisRhythmOptions> = {
 	axis: 'wdth',
@@ -338,10 +353,16 @@ export function applyAxisRhythm(
 	})
 
 	// --- Pass 5: Apply axis values + optional line-length preservation ---
+	// Read the element's full font-variation-settings once so we can override only
+	// the target axis while preserving opsz, wdth, and any others the parent set.
+	// Setting just `'wght' 700` on a span would drop the parent's `opsz 18` entirely,
+	// making axis-width measurements inconsistent with natural-width measurements.
+	const baseFVS = getComputedStyle(element).fontVariationSettings
+
 	if (linePreservation === 'none') {
-		// Simple path: apply axis variation directly.
+		// Simple path: apply axis variation directly, preserving parent axes.
 		lineElements.forEach((el, i) => {
-			el.style.fontVariationSettings = `'${axis}' ${lineAxisValues[i]}`
+			el.style.fontVariationSettings = overrideAxis(baseFVS, axis, lineAxisValues[i])
 		})
 	} else {
 		// Preservation path: measure natural widths before applying axis values,
@@ -350,9 +371,9 @@ export function applyAxisRhythm(
 		// Batch read 1: natural widths (spans inherit parent's fontVariationSettings).
 		const naturalWidths = lineElements.map(el => el.getBoundingClientRect().width)
 
-		// Apply axis values to all spans.
+		// Apply axis values to all spans, preserving all other parent axes.
 		lineElements.forEach((el, i) => {
-			el.style.fontVariationSettings = `'${axis}' ${lineAxisValues[i]}`
+			el.style.fontVariationSettings = overrideAxis(baseFVS, axis, lineAxisValues[i])
 		})
 
 		// Batch read 2: widths after axis application.
