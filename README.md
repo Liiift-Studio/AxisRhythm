@@ -32,6 +32,8 @@ import { AxisRhythmText } from '@liiift-studio/axisrhythm'
 </AxisRhythmText>
 ```
 
+`linePreservation="spacing"` prevents line overflow by compensating each line's width with letter-spacing. For display or headline text where overflow is acceptable (or part of the effect), omit it or set `linePreservation="none"`.
+
 ### React hook
 
 ```tsx
@@ -87,7 +89,7 @@ const opts: AxisRhythmOptions = { axis: 'wdth', values: [100, 88], period: 2 }
 | `period` | `2` | Lines per cycle. Set equal to `values.length` — if smaller, trailing values are never reached; if larger, values repeat within the cycle |
 | `align` | `'top'` | `'top'` counts from the first line; `'bottom'` counts from the last |
 | `lineDetection` | `'bcr'` | `'bcr'` reads actual browser layout — ground truth, works with any font and inline HTML. `'canvas'` uses `@chenglou/pretext` for arithmetic line breaking with no forced reflow on resize (`npm install @chenglou/pretext`). Falls back to `'bcr'` while pretext loads |
-| `linePreservation` | `'none'` | `'none'` — no compensation. `'spacing'` — adjusts letter-spacing per line to match natural widths; prevents reflow. `'scale'` — applies a GPU scaleX transform per line; faster, minor horizontal compression at large ranges |
+| `linePreservation` | `'none'` | `'none'` — no compensation; line widths vary with the axis value (best for display type where reflow is part of the effect). `'spacing'` — adjusts letter-spacing per line to match natural widths; prevents overflow; **recommended for body text**. `'scale'` — applies a GPU scaleX transform per line; no letter-spacing changes, slight horizontal glyph compression at large axis ranges |
 | `as` | `'p'` | HTML element to render, e.g. `'h1'`, `'div'`, `'li'`. Accepts any valid React element type. *(React component only)* |
 
 ---
@@ -95,6 +97,10 @@ const opts: AxisRhythmOptions = { axis: 'wdth', values: [100, 88], period: 2 }
 ## How it works
 
 The algorithm detects visual lines by measuring word span positions with `getBoundingClientRect()`, then wraps each line in a `<span>` with its own `font-variation-settings`. The injected value overrides only the target axis — all other axes set on the parent element are preserved by reading and patching the computed `fontVariationSettings` string before writing. Runs on mount and on every resize via `ResizeObserver`. Re-runs when fonts finish loading (`document.fonts.ready`). The effect is skipped entirely if `prefers-reduced-motion: reduce` is set.
+
+**Line break safety:** Each run starts from the original HTML, detects lines at the element's natural layout, then locks them with `white-space: nowrap`. Word breaks never change as a result of the axis variation.
+
+**Width overflow:** Applying different axis values per line alters character widths, so lines may grow wider or narrower than the container. `linePreservation: 'none'` (default) is appropriate for display or headline type where the axis range is large and overflow is intentional. For body text — or any context where line edges must stay flush — use `linePreservation: 'spacing'` (adjusts letter-spacing to compensate) or `'scale'` (GPU scaleX transform).
 
 The `linePreservation` pass measures each line's natural width before applying the axis value, then applies axis and measures again. The delta becomes either a letter-spacing correction (`'spacing'`) or a `scaleX` transform (`'scale'`) per line.
 
