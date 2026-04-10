@@ -83,8 +83,8 @@ const opts: AxisRhythmOptions = { axis: 'wdth', values: [100, 88], period: 2 }
 | Option | Default | Description |
 |--------|---------|-------------|
 | `axis` | `'wdth'` | Variable font axis tag, e.g. `'wdth'`, `'wght'`, `'opsz'` |
-| `values` | `[100, 96]` | Axis values to cycle through across lines. Pass more than two for longer cycles |
-| `period` | `2` | Lines per cycle |
+| `values` | `[100, 96]` | Axis values to cycle through across lines. Set `period` equal to the number of values for all values to appear exactly once per cycle |
+| `period` | `2` | Lines per cycle. Set equal to `values.length` — if smaller, trailing values are never reached; if larger, values repeat within the cycle |
 | `align` | `'top'` | `'top'` counts from the first line; `'bottom'` counts from the last |
 | `lineDetection` | `'bcr'` | `'bcr'` reads actual browser layout — ground truth, works with any font and inline HTML. `'canvas'` uses `@chenglou/pretext` for arithmetic line breaking with no forced reflow on resize (`npm install @chenglou/pretext`). Falls back to `'bcr'` while pretext loads |
 | `linePreservation` | `'none'` | `'none'` — no compensation. `'spacing'` — adjusts letter-spacing per line to match natural widths; prevents reflow. `'scale'` — applies a GPU scaleX transform per line; faster, minor horizontal compression at large ranges |
@@ -94,7 +94,7 @@ const opts: AxisRhythmOptions = { axis: 'wdth', values: [100, 88], period: 2 }
 
 ## How it works
 
-The algorithm detects visual lines by measuring word span positions with `getBoundingClientRect()`, then wraps each line in a `<span>` with its own `font-variation-settings`. The injected value overrides only the target axis — all other axes set on the parent element are preserved by reading and patching the computed `fontVariationSettings` string before writing. Runs on mount and on every resize via `ResizeObserver`. Re-runs when fonts finish loading (`document.fonts.ready`).
+The algorithm detects visual lines by measuring word span positions with `getBoundingClientRect()`, then wraps each line in a `<span>` with its own `font-variation-settings`. The injected value overrides only the target axis — all other axes set on the parent element are preserved by reading and patching the computed `fontVariationSettings` string before writing. Runs on mount and on every resize via `ResizeObserver`. Re-runs when fonts finish loading (`document.fonts.ready`). The effect is skipped entirely if `prefers-reduced-motion: reduce` is set.
 
 The `linePreservation` pass measures each line's natural width before applying the axis value, then applies axis and measures again. The delta becomes either a letter-spacing correction (`'spacing'`) or a `scaleX` transform (`'scale'`) per line.
 
