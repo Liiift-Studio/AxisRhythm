@@ -20,6 +20,8 @@ npm install @liiift-studio/axisrhythm
 
 > **Next.js App Router:** this library uses browser APIs. Add `"use client"` to any component file that imports from it.
 
+> **Variable font required:** Axis Rhythm sets `font-variation-settings` per line. The target font must support the axis you specify (e.g. a font with a `wdth` axis for `axis: 'wdth'`). The effect is invisible with fonts that do not have variable axis support.
+
 ### React component
 
 ```tsx
