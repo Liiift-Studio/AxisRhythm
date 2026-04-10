@@ -18,6 +18,8 @@ npm install @liiift-studio/axisrhythm
 
 ## Usage
 
+> **Next.js App Router:** this library uses browser APIs. Add `"use client"` to any component file that imports from it.
+
 ### React component
 
 ```tsx
@@ -33,20 +35,43 @@ import { AxisRhythmText } from '@liiift-studio/axisrhythm'
 ```tsx
 import { useAxisRhythm } from '@liiift-studio/axisrhythm'
 
+// Inside a React component:
 const ref = useAxisRhythm({ axis: 'wdth', values: [100, 88], period: 2 })
-<p ref={ref}>{children}</p>
+return <p ref={ref}>{children}</p>
 ```
+
+The hook re-runs automatically on resize via `ResizeObserver` and after fonts load via `document.fonts.ready`.
 
 ### Vanilla JS
 
 ```ts
-import { applyAxisRhythm, getCleanHTML } from '@liiift-studio/axisrhythm'
+import { applyAxisRhythm, removeAxisRhythm, getCleanHTML } from '@liiift-studio/axisrhythm'
 
 const el = document.querySelector('p')
 const original = getCleanHTML(el)
+const opts = { axis: 'wdth', values: [100, 88], period: 2 }
 
-// Run once, then re-run on resize
-applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 88], period: 2 })
+function run() {
+  applyAxisRhythm(el, original, opts)
+}
+
+run()
+document.fonts.ready.then(run)
+
+const ro = new ResizeObserver(() => run())
+ro.observe(el)
+
+// Later — disconnect and restore original markup:
+// ro.disconnect()
+// removeAxisRhythm(el, original)
+```
+
+### TypeScript
+
+```ts
+import type { AxisRhythmOptions } from '@liiift-studio/axisrhythm'
+
+const opts: AxisRhythmOptions = { axis: 'wdth', values: [100, 88], period: 2 }
 ```
 
 ---
@@ -59,7 +84,7 @@ applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 88], period: 2 })
 | `values` | `[100, 96]` | Axis values to cycle through across lines. Pass more than two for longer cycles |
 | `period` | `2` | Lines per cycle |
 | `align` | `'top'` | `'top'` counts from the first line; `'bottom'` counts from the last |
-| `lineDetection` | `'bcr'` | `'bcr'` reads actual browser layout — ground truth, works with any font and inline HTML. `'canvas'` uses [`@chenglou/pretext`](https://github.com/chenglou/pretext) for arithmetic line breaking with no forced reflow on resize. Install pretext separately |
+| `lineDetection` | `'bcr'` | `'bcr'` reads actual browser layout — ground truth, works with any font and inline HTML. `'canvas'` uses `@chenglou/pretext` for arithmetic line breaking with no forced reflow on resize (`npm install @chenglou/pretext`). Falls back to `'bcr'` while pretext loads |
 | `linePreservation` | `'none'` | `'none'` — no compensation. `'spacing'` — adjusts letter-spacing per line to match natural widths; prevents reflow. `'scale'` — applies a GPU scaleX transform per line; faster, minor horizontal compression at large ranges |
 | `as` | `'p'` | HTML element to render, e.g. `'h1'`, `'div'`, `'li'`. Accepts any valid React element type. *(React component only)* |
 
@@ -67,7 +92,7 @@ applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 88], period: 2 })
 
 ## How it works
 
-The algorithm detects visual lines by measuring word span positions with `getBoundingClientRect()`, then wraps each line in a `<span>` with its own `font-variation-settings`. The injected value overrides only the target axis — the parent element's other axes (`opsz`, `wdth`, etc.) are preserved by reading and patching the computed `fontVariationSettings` string. Runs on mount and on every resize via `ResizeObserver`. Re-runs when fonts finish loading (`document.fonts.ready`).
+The algorithm detects visual lines by measuring word span positions with `getBoundingClientRect()`, then wraps each line in a `<span>` with its own `font-variation-settings`. The injected value overrides only the target axis — all other axes set on the parent element are preserved by reading and patching the computed `fontVariationSettings` string before writing. Runs on mount and on every resize via `ResizeObserver`. Re-runs when fonts finish loading (`document.fonts.ready`).
 
 The `linePreservation` pass measures each line's natural width before applying the axis value, then applies axis and measures again. The delta becomes either a letter-spacing correction (`'spacing'`) or a `scaleX` transform (`'scale'`) per line.
 
