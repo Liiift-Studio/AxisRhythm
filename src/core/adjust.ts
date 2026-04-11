@@ -1,5 +1,5 @@
 // axis-rhythm/src/core/adjust.ts — framework-agnostic axis-rhythm algorithm
-import { AXIS_RHYTHM_CLASSES, type AxisRhythmOptions } from './types'
+import { AXIS_RHYTHM_CLASSES, type AxisRhythmOptions, type WaveShape } from './types'
 
 // ─── Syllable (optional peer dep) ─────────────────────────────────────────────
 
@@ -10,7 +10,7 @@ let _syllableLoading = false
 function tryLoadSyllable(): void {
 	if (_syllable !== null || _syllableLoading) return
 	_syllableLoading = true
-	import('syllable' as string)
+	import(/* @vite-ignore */ 'syllable' as string)
 		.then((m) => {
 			const mod = m as SyllableModule
 			_syllable = 'syllable' in mod ? mod.syllable : (mod as { default: (w: string) => number }).default
@@ -38,7 +38,7 @@ let _pretextLoading = false
 function tryLoadPretext(): void {
 	if (_pretext !== null || _pretextLoading) return
 	_pretextLoading = true
-	import('@chenglou/pretext' as string)
+	import(/* @vite-ignore */ '@chenglou/pretext' as string)
 		.then((m) => { _pretext = m as PretextModule })
 		.catch(() => {
 			console.warn('[axisrhythm] canvas lineDetection requires @chenglou/pretext — falling back to BCR')
@@ -111,14 +111,70 @@ function overrideAxis(baseFVS: string, axis: string, value: number): string {
 }
 
 /** Resolved defaults applied when options are omitted */
-const DEFAULTS: Required<AxisRhythmOptions> = {
+const DEFAULTS = {
 	axis: 'wdth',
-	values: [100, 96],
+	values: [100, 96] as number[],
 	period: 2,
-	align: 'top',
-	lineDetection: 'bcr',
-	linePreservation: 'none',
+	align: 'top' as const,
+	source: 'fixed' as const,
+	lineDetection: 'bcr' as const,
+	linePreservation: 'none' as const,
+	animate: false,
+	waveShape: 'sine' as WaveShape,
+	speed: 1,
 }
+
+// ─── Animation phase registry ─────────────────────────────────────────────────
+
+/**
+ * Per-element phase state for the animated mode. Keyed by the primary element so
+ * synced elements can read the same phase object without duplicating it.
+ */
+const sharedPhases = new WeakMap<HTMLElement, { phase: number }>()
+
+// ─── Wave shape helpers ───────────────────────────────────────────────────────
+
+/** Smooth sinusoidal oscillation, returns 0–1 */
+function sineWave(phase: number): number {
+	return 0.5 + 0.5 * Math.sin(phase * 2 * Math.PI)
+}
+
+/** Linear in, linear out — sharper transitions between values, returns 0–1 */
+function triangleWave(phase: number): number {
+	const t = ((phase % 1) + 1) % 1 // clamp to [0, 1)
+	return t < 0.5 ? t * 2 : 2 - t * 2
+}
+
+/**
+ * Sine with slight overshoot at peaks — more physical, spring-like feel.
+ * The bounce term adds ~18% amplitude at 2× the frequency, which is then
+ * clamped and re-normalised so the output stays in [0, 1].
+ */
+function springWave(phase: number): number {
+	const s = Math.sin(phase * 2 * Math.PI)
+	const bounce = 0.18 * Math.sin(phase * 4 * Math.PI)
+	const raw = (s + bounce) / 1.18 // normalise to [-1, 1]
+	return 0.5 + 0.5 * Math.max(-1, Math.min(1, raw))
+}
+
+/**
+ * Map a normalised phase [0, 1] to an axis value within the options.values range.
+ * phase = 0/1 → values[0]; phase = 0.5 → values[last] (for sine); triangle and
+ * spring follow the same convention.
+ */
+function phaseToAxisValue(phase: number, waveShape: WaveShape, values: number[]): number {
+	const lo = values[0] ?? 100
+	const hi = values[values.length - 1] ?? 96
+	let t: number
+	switch (waveShape) {
+		case 'triangle': t = triangleWave(phase); break
+		case 'spring':   t = springWave(phase);   break
+		default:         t = sineWave(phase);      break
+	}
+	return lo + (hi - lo) * t
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
  * Returns the innerHTML of an element with all axis-rhythm injected markup removed,
@@ -323,7 +379,7 @@ export function applyAxisRhythm(
 	if (source === 'syllable-density' && _syllable !== null) {
 		// Compute average syllables-per-word for each line
 		const lineDensities = lineGroups.map((group) => {
-			const words = group
+			const words = group.spans
 				.map((s) => (s.textContent ?? '').trim())
 				.filter(Boolean)
 				.flatMap((t) => t.split(/\s+/))
@@ -479,4 +535,96 @@ export function applyAxisRhythm(
  */
 export function removeAxisRhythm(element: HTMLElement, originalHTML: string): void {
 	element.innerHTML = originalHTML
+}
+
+/**
+ * Start a continuous animated axis-rhythm wave on an element.
+ *
+ * Calls `applyAxisRhythm` once to build the .ar-line DOM structure, then drives
+ * per-line axis values each animation frame. Each line is offset in phase by
+ * `(lineIndex / period)` so adjacent lines are always at different oscillation
+ * points — the wave visually drifts up or down the paragraph over time.
+ *
+ * @param element      - Target element (must be in the live DOM and visible)
+ * @param originalHTML - Clean HTML snapshot from getCleanHTML()
+ * @param options      - AxisRhythmOptions; `animate`, `waveShape`, `speed`, and
+ *                       `syncTo` are specific to this function. `animate: true`
+ *                       is implied — you don't need to pass it explicitly.
+ * @returns            - A stop function. Call it to cancel the rAF loop and clean up.
+ */
+export function startAxisRhythm(
+	element: HTMLElement,
+	originalHTML: string,
+	options: AxisRhythmOptions = {},
+): () => void {
+	if (typeof window === 'undefined') return () => {}
+
+	// Build the .ar-line DOM structure (static, no animated options needed).
+	applyAxisRhythm(element, originalHTML, options)
+
+	const axis     = options.axis      ?? DEFAULTS.axis
+	const values   = options.values    ?? DEFAULTS.values
+	const period   = Math.max(1, Math.round(options.period ?? DEFAULTS.period))
+	const waveShape = options.waveShape ?? DEFAULTS.waveShape
+	const speed    = options.speed     ?? DEFAULTS.speed
+	const syncTo   = options.syncTo
+
+	// Resolve the phase object:
+	// - Synced element: borrows the primary element's phase (doesn't advance it).
+	// - Primary element: creates its own phase and stores it in the WeakMap so
+	//   others can sync to this element later.
+	let phaseObj: { phase: number }
+	let isPrimary: boolean
+
+	if (syncTo) {
+		const existing = sharedPhases.get(syncTo)
+		if (existing) {
+			phaseObj  = existing
+			isPrimary = false
+		} else {
+			// syncTo hasn't started yet — create a shared phase anyway so the
+			// synced element doesn't throw; it will effectively become primary.
+			phaseObj  = { phase: 0 }
+			sharedPhases.set(element, phaseObj)
+			isPrimary = true
+		}
+	} else {
+		phaseObj  = { phase: 0 }
+		sharedPhases.set(element, phaseObj)
+		isPrimary = true
+	}
+
+	const baseFVS     = getComputedStyle(element).fontVariationSettings
+	const lineElements = Array.from(
+		element.querySelectorAll<HTMLElement>(`.${AXIS_RHYTHM_CLASSES.line}`),
+	)
+
+	/** Milliseconds for one complete oscillation cycle at speed = 1 */
+	const CYCLE_MS = 4000
+	let lastTime: number | null = null
+	let rafId: number
+
+	function frame(time: number): void {
+		if (lastTime !== null && isPrimary) {
+			const dt = time - lastTime
+			phaseObj.phase = (phaseObj.phase + dt / (CYCLE_MS / speed)) % 1
+		}
+		lastTime = time
+
+		lineElements.forEach((el, i) => {
+			const linePhase = (phaseObj.phase + i / period) % 1
+			el.style.fontVariationSettings = overrideAxis(
+				baseFVS, axis, phaseToAxisValue(linePhase, waveShape, values),
+			)
+		})
+
+		rafId = requestAnimationFrame(frame)
+	}
+
+	rafId = requestAnimationFrame(frame)
+
+	return () => {
+		cancelAnimationFrame(rafId)
+		if (isPrimary) sharedPhases.delete(element)
+	}
 }

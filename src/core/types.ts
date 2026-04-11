@@ -1,5 +1,8 @@
 // axis-rhythm/src/core/types.ts — types and class constants
 
+/** Wave shape for the animated axis-rhythm mode */
+export type WaveShape = 'sine' | 'triangle' | 'spring'
+
 /** Options controlling the axis-rhythm effect */
 export interface AxisRhythmOptions {
 	/** Variable font axis tag, e.g. 'wdth' or 'wght'. Default: 'wdth' */
@@ -54,6 +57,40 @@ export interface AxisRhythmOptions {
 	 *   alters horizontal glyph proportions at large axis ranges.
 	 */
 	linePreservation?: 'none' | 'spacing' | 'scale'
+	/**
+	 * Animate the axis rhythm — turns the static snapshot into a slow ambient wave.
+	 * Uses `startAxisRhythm` internally. Ignored by `applyAxisRhythm`. Default: false
+	 *
+	 * The wave advances continuously via rAF. Each line is offset in phase by
+	 * `(1 / period) * fullCycle`, so adjacent lines are always at different points
+	 * in the oscillation — the effect drifts up or down the paragraph over time.
+	 */
+	animate?: boolean
+	/**
+	 * Wave shape for the animated mode. Default: 'sine'
+	 *
+	 * - **'sine'** — smooth, organic oscillation
+	 * - **'triangle'** — linear in, linear out; sharper transitions between values
+	 * - **'spring'** — sine with slight overshoot at peaks; more physical feel
+	 */
+	waveShape?: WaveShape
+	/**
+	 * Animation speed multiplier. Default: 1
+	 *
+	 * At `1`, one full cycle takes 4 seconds — a comfortable ambient pace.
+	 * At `0.5` the wave moves half as fast; at `2` twice as fast.
+	 * Use values below 1 for imperceptible background motion.
+	 */
+	speed?: number
+	/**
+	 * Synchronise phase with another element's animation loop.
+	 *
+	 * Both elements will be at the same point in the oscillation at all times.
+	 * The target element must already have `startAxisRhythm` running on it.
+	 * The synced element reads phase but does not advance it — the primary
+	 * element's loop remains the source of truth.
+	 */
+	syncTo?: HTMLElement
 }
 
 /** CSS class names injected by axis-rhythm — use these to target generated markup */

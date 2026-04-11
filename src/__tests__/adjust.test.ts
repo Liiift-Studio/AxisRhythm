@@ -137,8 +137,8 @@ describe('axis-rhythm', () => {
 
 		const lines = el.querySelectorAll<HTMLElement>(`.${AXIS_RHYTHM_CLASSES.line}`)
 		expect(lines.length).toBeGreaterThanOrEqual(2)
-		expect(lines[0].style.fontVariationSettings).toContain("'wdth' 100")
-		expect(lines[1].style.fontVariationSettings).toContain("'wdth' 96")
+		expect(lines[0].style.fontVariationSettings).toContain('"wdth" 100')
+		expect(lines[1].style.fontVariationSettings).toContain('"wdth" 96')
 	})
 
 	// 5b. Output HTML contains the font-variation-settings strings
@@ -146,8 +146,8 @@ describe('axis-rhythm', () => {
 		const el = makeElement(nWords(14))
 		const original = getCleanHTML(el)
 		applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 96], period: 2 })
-		expect(el.innerHTML).toContain("'wdth' 100")
-		expect(el.innerHTML).toContain("'wdth' 96")
+		expect(el.innerHTML).toContain('"wdth" 100')
+		expect(el.innerHTML).toContain('"wdth" 96')
 	})
 
 	// 6. align: 'bottom' reverses the cycle — last line gets values[0], second-to-last gets values[1]
@@ -162,9 +162,9 @@ describe('axis-rhythm', () => {
 		const last = lines[lines.length - 1]
 		const secondToLast = lines[lines.length - 2]
 		// align=bottom, 2 lines: cyclePos for last (index 1) = (2-1-1)%2=0 → values[0]=100
-		expect(last.style.fontVariationSettings).toContain("'wdth' 100")
+		expect(last.style.fontVariationSettings).toContain('"wdth" 100')
 		// cyclePos for first (index 0) = (2-1-0)%2=1 → values[1]=96
-		expect(secondToLast.style.fontVariationSettings).toContain("'wdth' 96")
+		expect(secondToLast.style.fontVariationSettings).toContain('"wdth" 96')
 	})
 
 	// 7. Custom period: 3 cycles through 3 values across 3 lines
@@ -176,9 +176,9 @@ describe('axis-rhythm', () => {
 
 		const lines = el.querySelectorAll<HTMLElement>(`.${AXIS_RHYTHM_CLASSES.line}`)
 		expect(lines.length).toBeGreaterThanOrEqual(3)
-		expect(lines[0].style.fontVariationSettings).toContain("'wght' 400")
-		expect(lines[1].style.fontVariationSettings).toContain("'wght' 450")
-		expect(lines[2].style.fontVariationSettings).toContain("'wght' 500")
+		expect(lines[0].style.fontVariationSettings).toContain('"wght" 400')
+		expect(lines[1].style.fontVariationSettings).toContain('"wght" 450')
+		expect(lines[2].style.fontVariationSettings).toContain('"wght" 500')
 	})
 
 	// 8. Single-word input doesn't crash
@@ -224,10 +224,10 @@ describe('axis-rhythm', () => {
 		applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 96], period: 2, align: 'top' })
 		const lines = el.querySelectorAll<HTMLElement>(`.${AXIS_RHYTHM_CLASSES.line}`)
 		expect(lines.length).toBeGreaterThanOrEqual(4)
-		expect(lines[0].style.fontVariationSettings).toContain("'wdth' 100")
-		expect(lines[1].style.fontVariationSettings).toContain("'wdth' 96")
-		expect(lines[2].style.fontVariationSettings).toContain("'wdth' 100")
-		expect(lines[3].style.fontVariationSettings).toContain("'wdth' 96")
+		expect(lines[0].style.fontVariationSettings).toContain('"wdth" 100')
+		expect(lines[1].style.fontVariationSettings).toContain('"wdth" 96')
+		expect(lines[2].style.fontVariationSettings).toContain('"wdth" 100')
+		expect(lines[3].style.fontVariationSettings).toContain('"wdth" 96')
 	})
 
 	// 14. Whitespace-only element does not throw
@@ -244,7 +244,7 @@ describe('axis-rhythm', () => {
 		applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 96], period: 2, align: 'bottom' })
 		const lines = el.querySelectorAll<HTMLElement>(`.${AXIS_RHYTHM_CLASSES.line}`)
 		expect(lines.length).toBe(1)
-		expect(lines[0].style.fontVariationSettings).toContain("'wdth' 100")
+		expect(lines[0].style.fontVariationSettings).toContain('"wdth" 100')
 	})
 
 	// 16. Custom wght axis applies correct values
@@ -254,8 +254,8 @@ describe('axis-rhythm', () => {
 		applyAxisRhythm(el, original, { axis: 'wght', values: [400, 700], period: 2, align: 'top' })
 		const lines = el.querySelectorAll<HTMLElement>(`.${AXIS_RHYTHM_CLASSES.line}`)
 		expect(lines.length).toBeGreaterThanOrEqual(2)
-		expect(lines[0].style.fontVariationSettings).toContain("'wght' 400")
-		expect(lines[1].style.fontVariationSettings).toContain("'wght' 700")
+		expect(lines[0].style.fontVariationSettings).toContain('"wght" 400')
+		expect(lines[1].style.fontVariationSettings).toContain('"wght" 700')
 	})
 
 	// 17. getCleanHTML after apply contains no axis-rhythm class names
