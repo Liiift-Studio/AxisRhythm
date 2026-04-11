@@ -1,6 +1,25 @@
 // axis-rhythm/src/core/adjust.ts — framework-agnostic axis-rhythm algorithm
 import { AXIS_RHYTHM_CLASSES, type AxisRhythmOptions } from './types'
 
+// ─── Syllable (optional peer dep) ─────────────────────────────────────────────
+
+type SyllableModule = { syllable: (word: string) => number } | { default: (word: string) => number }
+let _syllable: ((word: string) => number) | null = null
+let _syllableLoading = false
+
+function tryLoadSyllable(): void {
+	if (_syllable !== null || _syllableLoading) return
+	_syllableLoading = true
+	import('syllable' as string)
+		.then((m) => {
+			const mod = m as SyllableModule
+			_syllable = 'syllable' in mod ? mod.syllable : (mod as { default: (w: string) => number }).default
+		})
+		.catch(() => {
+			console.warn('[axisrhythm] source: "syllable-density" requires the `syllable` package — falling back to "fixed"')
+		})
+}
+
 // ─── Pretext (canvas line detection) ─────────────────────────────────────────
 
 /** Minimal surface of @chenglou/pretext that we use */
@@ -172,6 +191,10 @@ export function applyAxisRhythm(
 	// Kick off pretext background load when canvas mode is requested
 	if (lineDetection === 'canvas') tryLoadPretext()
 
+	// Kick off syllable background load when syllable-density source is requested
+	const source = options.source ?? 'fixed'
+	if (source === 'syllable-density') tryLoadSyllable()
+
 	// --- Pass 1: Reset ---
 	element.innerHTML = originalHTML
 
@@ -290,15 +313,50 @@ export function applyAxisRhythm(
 	// Build line spans and insert into DOM before measuring widths.
 	// axis values are applied in Pass 5 so we can read natural widths first.
 
+	// ─── Compute per-line axis values ────────────────────────────────────────────
+	// 'fixed' mode: cycle through values[] in order, repeating every `period` lines.
+	// 'syllable-density' mode: map per-line syllable density to the values[] range.
+	//   values[0] → lowest density line, values[1] → highest density line.
+	//   Lines in between are linearly interpolated.
+
+	let densityAxisValues: number[] | null = null
+	if (source === 'syllable-density' && _syllable !== null) {
+		// Compute average syllables-per-word for each line
+		const lineDensities = lineGroups.map((group) => {
+			const words = group
+				.map((s) => (s.textContent ?? '').trim())
+				.filter(Boolean)
+				.flatMap((t) => t.split(/\s+/))
+				.filter(Boolean)
+			if (words.length === 0) return 0
+			const total = words.reduce((sum, w) => sum + _syllable!(w), 0)
+			return total / words.length
+		})
+		const minD = Math.min(...lineDensities)
+		const maxD = Math.max(...lineDensities)
+		const rangeD = maxD - minD || 1
+		const lo = values[0] ?? 100
+		const hi = values[values.length - 1] ?? 96
+		densityAxisValues = lineDensities.map((d) => {
+			const t = (d - minD) / rangeD // 0 = simplest line, 1 = most complex
+			return lo + (hi - lo) * t
+		})
+	}
+
 	// Computed axis value per line (stored for use in Pass 5).
 	const lineAxisValues: number[] = []
 	const lineElements: HTMLElement[] = []
 
 	lineGroups.forEach((group, lineIndex) => {
-		const cyclePos = align === 'bottom'
-			? (totalLines - 1 - lineIndex) % period
-			: lineIndex % period
-		lineAxisValues.push(values[cyclePos % values.length])
+		const axisValue = densityAxisValues !== null
+			? densityAxisValues[lineIndex]
+			: (() => {
+				const cyclePos = align === 'bottom'
+					? (totalLines - 1 - lineIndex) % period
+					: lineIndex % period
+				return values[cyclePos % values.length]
+			})()
+		lineAxisValues.push(axisValue)
 
 		// Create the line wrapper span — no fontVariationSettings yet.
 		const lineSpan = document.createElement('span')

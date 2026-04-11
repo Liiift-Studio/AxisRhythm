@@ -11,6 +11,18 @@ export interface AxisRhythmOptions {
 	/** Anchor alignment: 'top' counts from the first line, 'bottom' from the last. Default: 'top' */
 	align?: 'top' | 'bottom'
 	/**
+	 * Axis value source. Default: 'fixed'
+	 *
+	 * - **'fixed'** (default) — cycle through `values` in order, repeating every `period` lines.
+	 *
+	 * - **'syllable-density'** — per-line syllable density drives the axis value.
+	 *   `values[0]` is assigned to the line with the lowest syllable density (simple words);
+	 *   `values[1]` is assigned to the line with the highest density (complex words);
+	 *   lines in between are interpolated. Requires the `syllable` package:
+	 *   `npm install syllable`. Falls back to 'fixed' if not installed.
+	 */
+	source?: 'fixed' | 'syllable-density'
+	/**
 	 * Line detection method. Default: 'bcr'
 	 *
 	 * - **'bcr'** (default) — uses `getBoundingClientRect()` on injected word spans.
