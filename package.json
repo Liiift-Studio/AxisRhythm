@@ -1,6 +1,6 @@
 {
 	"name": "@liiift-studio/axisrhythm",
-	"version": "1.1.7",
+	"version": "1.1.8",
 	"description": "Deliberate variable font axis rhythm across paragraph lines \u2014 alternating wdth/wght values for typographic texture",
 	"type": "module",
 	"main": "dist/index.cjs",
@@ -27,6 +27,10 @@
 		"react": ">=17",
 		"react-dom": ">=17",
 		"@chenglou/pretext": ">=0.0.5"
+	},
+	"optionalDependencies": {
+		"@chenglou/pretext": ">=0.0.5",
+		"syllable": "^5.0.0"
 	},
 	"peerDependenciesMeta": {
 		"react": {
