@@ -89,9 +89,10 @@ const opts: AxisRhythmOptions = { axis: 'wdth', values: [100, 88], period: 2 }
 | `axis` | `'wdth'` | Variable font axis tag, e.g. `'wdth'`, `'wght'`, `'opsz'` |
 | `values` | `[100, 96]` | Axis values to cycle through across lines. Set `period` equal to the number of values for all values to appear exactly once per cycle |
 | `period` | `2` | Lines per cycle. Set equal to `values.length` — if smaller, trailing values are never reached; if larger, values repeat within the cycle |
-| `align` | `'top'` | `'top'` counts from the first line; `'bottom'` counts from the last |
+| `align` | `'top'` | `'top' \| 'bottom' \| 'end'`. `'top'` counts from the first line; `'bottom'` counts from the last; `'end'` anchors to the trailing edge of each line (right in LTR, left in RTL layouts) |
 | `lineDetection` | `'bcr'` | `'bcr'` reads actual browser layout — ground truth, works with any font and inline HTML. `'canvas'` uses `@chenglou/pretext` for arithmetic line breaking with no forced reflow on resize (`npm install @chenglou/pretext`). Falls back to `'bcr'` while pretext loads |
 | `linePreservation` | `'none'` | `'none'` — no compensation; line widths vary with the axis value (best for display type where reflow is part of the effect). `'spacing'` — adjusts letter-spacing per line to match natural widths; prevents overflow; **recommended for body text**. `'scale'` — applies a GPU scaleX transform per line; no letter-spacing changes, slight horizontal glyph compression at large axis ranges |
+| `intersect` | `false` | Pause the animation when the element is off-screen; resume when visible. Uses `IntersectionObserver` internally |
 | `as` | `'p'` | HTML element to render, e.g. `'h1'`, `'div'`, `'li'`. Accepts any valid React element type. *(React component only)* |
 
 ---
