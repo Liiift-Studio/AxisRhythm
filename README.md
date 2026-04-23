@@ -121,9 +121,7 @@ The package itself has zero runtime dependencies. Do not remove this entry.
 ## Future improvements
 
 - **Multi-axis variation** — cycle more than one axis simultaneously per line (e.g. alternate both `wdth` and `wght` independently)
-- **Intersection Observer** — defer the layout pass until the element enters the viewport, then re-run each time it scrolls back in
 - **SSR hydration** — generate stable line spans on the server to eliminate the flash-of-unstyled-text on first paint
-- **RTL support** — `align: 'end'` to anchor the cycle to the reading direction rather than the visual start
 - **Smooth re-layout** — animate axis values on resize instead of snapping, for a less jarring transition when viewport width changes
 
 ---

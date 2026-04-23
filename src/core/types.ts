@@ -11,8 +11,12 @@ export interface AxisRhythmOptions {
 	values?: number[]
 	/** Number of lines per cycle. Default: 2 */
 	period?: number
-	/** Anchor alignment: 'top' counts from the first line, 'bottom' from the last. Default: 'top' */
-	align?: 'top' | 'bottom'
+	/**
+	 * Anchor alignment: 'top' counts from the first line, 'bottom' from the last.
+	 * 'end' anchors to the reading direction's trailing edge — equivalent to 'bottom'
+	 * in LTR text and 'top' in RTL text. Default: 'top'
+	 */
+	align?: 'top' | 'bottom' | 'end'
 	/**
 	 * Axis value source. Default: 'fixed'
 	 *
@@ -82,6 +86,19 @@ export interface AxisRhythmOptions {
 	 * Use values below 1 for imperceptible background motion.
 	 */
 	speed?: number
+	/**
+	 * Defer the layout pass until the element enters the viewport.
+	 *
+	 * When `true`:
+	 * - In static mode (`animate: false`): skips the initial layout pass and instead
+	 *   attaches an `IntersectionObserver` that runs `applyAxisRhythm` each time the
+	 *   element enters the viewport.
+	 * - In animated mode (`animate: true`): pauses the rAF loop while the element is
+	 *   outside the viewport and resumes when it re-enters.
+	 *
+	 * Gracefully no-ops when `IntersectionObserver` is unavailable. Default: false
+	 */
+	intersect?: boolean
 	/**
 	 * Synchronise phase with another element's animation loop.
 	 *

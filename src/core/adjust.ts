@@ -240,7 +240,11 @@ export function applyAxisRhythm(
 	const values = options.values ?? DEFAULTS.values
 	if (values.length === 0) return  // guard: empty values array would cause modulo-by-zero
 	const period = Math.max(1, Math.round(options.period ?? DEFAULTS.period))
-	const align = options.align ?? DEFAULTS.align
+	// Resolve align: 'end' maps to 'bottom' in LTR and 'top' in RTL.
+	const alignRaw = options.align ?? DEFAULTS.align
+	const align = alignRaw === 'end'
+		? (getComputedStyle(element).direction === 'rtl' ? 'top' : 'bottom')
+		: alignRaw
 	const lineDetection = options.lineDetection ?? 'bcr'
 	const linePreservation = options.linePreservation ?? DEFAULTS.linePreservation
 
@@ -568,6 +572,7 @@ export function startAxisRhythm(
 	const waveShape = options.waveShape ?? DEFAULTS.waveShape
 	const speed    = options.speed     ?? DEFAULTS.speed
 	const syncTo   = options.syncTo
+	const intersect = options.intersect ?? false
 
 	// Resolve the phase object:
 	// - Synced element: borrows the primary element's phase (doesn't advance it).
@@ -603,6 +608,8 @@ export function startAxisRhythm(
 	const CYCLE_MS = 4000
 	let lastTime: number | null = null
 	let rafId: number
+	/** Whether the rAF loop is currently active (paused when element is off-screen) */
+	let running = true
 
 	function frame(time: number): void {
 		if (lastTime !== null && isPrimary) {
@@ -618,13 +625,35 @@ export function startAxisRhythm(
 			)
 		})
 
-		rafId = requestAnimationFrame(frame)
+		if (running) {
+			rafId = requestAnimationFrame(frame)
+		}
 	}
 
 	rafId = requestAnimationFrame(frame)
 
+	// When intersect is requested, pause the rAF loop while the element is
+	// outside the viewport and resume when it re-enters.
+	let io: IntersectionObserver | null = null
+	if (intersect && typeof IntersectionObserver !== 'undefined') {
+		io = new IntersectionObserver((entries) => {
+			const isVisible = entries[entries.length - 1].isIntersecting
+			if (isVisible && !running) {
+				running = true
+				lastTime = null // reset delta so phase doesn't jump after a long pause
+				rafId = requestAnimationFrame(frame)
+			} else if (!isVisible && running) {
+				running = false
+				cancelAnimationFrame(rafId)
+			}
+		})
+		io.observe(element)
+	}
+
 	return () => {
+		running = false
 		cancelAnimationFrame(rafId)
+		io?.disconnect()
 		if (isPrimary) sharedPhases.delete(element)
 	}
 }
