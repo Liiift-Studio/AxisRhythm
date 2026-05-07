@@ -45,7 +45,7 @@ export default function Home() {
 				<div className="prose-grid grid grid-cols-1 sm:grid-cols-2 gap-12 text-sm leading-relaxed opacity-70">
 					<div className="flex flex-col gap-3">
 						<p className="font-semibold opacity-100 text-base">CSS stops at the element</p>
-						<p>font-variation-settings applies a single setting to an entire element. Every line gets the same axis value. There&apos;s no way to target individual lines — they&apos;re not DOM nodes.</p>
+						<p>font-variation-settings applies a single setting to an entire element. Every line gets the same axis value. There&rsquo;s no way to target individual lines — they&rsquo;re not DOM nodes.</p>
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="font-semibold opacity-100 text-base">Axis Rhythm works line by line</p>
@@ -53,7 +53,7 @@ export default function Home() {
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="font-semibold opacity-100 text-base">It aids reading</p>
-						<p>Alternating axis values create a subtle visual banding across the paragraph — like column highlighting in a spreadsheet, but for text. The eye uses the variation as a landmark: each line has a slightly different texture, so you always know which line you&apos;re on and where the next one begins.</p>
+						<p>Alternating axis values create a subtle visual banding across the paragraph — like column highlighting in a spreadsheet, but for text. The eye uses the variation as a landmark: each line has a slightly different texture, so you always know which line you&rsquo;re on and where the next one begins.</p>
 					</div>
 					<div className="flex flex-col gap-3">
 						<p className="font-semibold opacity-100 text-base">Line length preservation</p>
