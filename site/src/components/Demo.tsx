@@ -22,11 +22,11 @@ const AXIS_CONFIG = {
 type AxisKey = keyof typeof AXIS_CONFIG
 
 /** Labelled range slider with value displayed below the track */
-function Slider({ label, value, min, max, step, onChange }: { label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void }) {
+function Slider({ label, value, min, max, step, onChange, title }: { label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void; title?: string }) {
 	return (
 		<div className="flex flex-col gap-1">
 			<span className="text-xs uppercase tracking-widest opacity-50">{label}</span>
-			<input type="range" min={min} max={max} step={step} value={value} aria-label={label} onChange={e => onChange(Number(e.target.value))} onTouchStart={e => e.stopPropagation()} style={{ touchAction: 'none' }} />
+			<input type="range" min={min} max={max} step={step} value={value} aria-label={label} title={title} onChange={e => onChange(Number(e.target.value))} onTouchStart={e => e.stopPropagation()} style={{ touchAction: 'none' }} />
 			<span className="tabular-nums text-xs opacity-50 text-right">{value}</span>
 		</div>
 	)
@@ -216,22 +216,22 @@ export default function Demo() {
 	return (
 		<div className="w-full">
 			<div className="grid grid-cols-3 gap-6 mb-6">
-				<Slider label="Axis High" value={valueHigh} min={cfg.min} max={cfg.max} step={cfg.step} onChange={setValueHigh} />
-				<Slider label="Axis Low" value={valueLow} min={cfg.min} max={cfg.max} step={cfg.step} onChange={setValueLow} />
-				<Slider label="Period" value={period} min={1} max={6} step={1} onChange={setPeriod} />
+				<Slider label="Axis High" value={valueHigh} min={cfg.min} max={cfg.max} step={cfg.step} onChange={setValueHigh} title="The maximum axis value assigned to lines — lines at the peak of each wave cycle will use this setting" />
+				<Slider label="Axis Low" value={valueLow} min={cfg.min} max={cfg.max} step={cfg.step} onChange={setValueLow} title="The minimum axis value assigned to lines — lines at the trough of each wave cycle will use this setting" />
+				<Slider label="Period" value={period} min={1} max={6} step={1} onChange={setPeriod} title="How many lines it takes to complete one full high-to-low-to-high cycle — shorter period = tighter alternation, longer = slower rhythm" />
 			</div>
 			<div className="flex flex-wrap items-center gap-3 mb-8">
 				<span className="text-xs uppercase tracking-widest opacity-50">Axis</span>
 				{(['wdth', 'wght'] as const).map(v => (
-					<button key={v} onClick={() => handleAxisChange(v)} aria-pressed={axis === v} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: axis === v ? 1 : 0.5, background: axis === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
+					<button key={v} onClick={() => handleAxisChange(v)} aria-pressed={axis === v} title={v === 'wdth' ? 'Animate the width axis — varies how condensed or expanded each line appears' : 'Animate the weight axis — varies how light or heavy each line appears'} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: axis === v ? 1 : 0.5, background: axis === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
 				))}
 				<span className="text-xs uppercase tracking-widest opacity-50 ml-4">Align</span>
 				{(['top', 'bottom'] as const).map(v => (
-					<button key={v} onClick={() => setAlign(v)} aria-pressed={align === v} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: align === v ? 1 : 0.5, background: align === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
+					<button key={v} onClick={() => setAlign(v)} aria-pressed={align === v} title={v === 'top' ? 'Align lines to the top baseline — rhythm starts from the first line downward' : 'Align lines to the bottom baseline — rhythm starts from the last line upward'} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: align === v ? 1 : 0.5, background: align === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
 				))}
 				<span className="text-xs uppercase tracking-widest opacity-50 ml-4">Preserve</span>
 				{(['none', 'spacing', 'scale'] as const).map(v => (
-					<button key={v} onClick={() => setLinePreservation(v)} aria-pressed={linePreservation === v} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: linePreservation === v ? 1 : 0.5, background: linePreservation === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
+					<button key={v} onClick={() => setLinePreservation(v)} aria-pressed={linePreservation === v} title={v === 'none' ? 'No compensation — axis changes may shift line heights and cause ragged paragraph edges' : v === 'spacing' ? 'Adjust letter-spacing per line to keep each line the same length despite axis variation' : 'Scale each line uniformly to keep line lengths consistent despite axis variation'} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: linePreservation === v ? 1 : 0.5, background: linePreservation === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
 				))}
 
 				{/* Cursor mode — desktop/hover-capable devices only */}
