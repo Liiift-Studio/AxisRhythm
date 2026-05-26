@@ -110,6 +110,15 @@ applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 88], period: 2 })`} 
 				</div>
 			</section>
 
+			{/* Accessibility & Compatibility */}
+			<section className="w-full max-w-2xl lg:max-w-5xl flex flex-col gap-6">
+				<p className="text-xs uppercase tracking-widest opacity-50">Accessibility &amp; compatibility</p>
+				<div className="flex flex-col gap-4 text-sm leading-relaxed opacity-70">
+					<p><strong className="opacity-100">prefers-reduced-motion</strong> — when the user has enabled reduced motion in their OS settings, all axis alternation is skipped and the element is restored to its original HTML. No spans are injected; the text renders as plain prose.</p>
+					<p><strong className="opacity-100">update: slow</strong> — on e-ink and slow-refresh displays (Kindle, reMarkable, and similar panels), variable font axis animations produce no visible effect because the panel cannot refresh fast enough to show the transition. Axis Rhythm detects <code className="text-xs font-mono">matchMedia(&apos;(update: slow)&apos;)</code> and returns early, restoring the element to its original HTML without injecting any spans or applying any axis values.</p>
+				</div>
+			</section>
+
 			<SiteFooter current="axisRhythm" npmVersion={version} siteVersion={siteVersion} />
 
 		</main>

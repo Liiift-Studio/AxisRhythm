@@ -232,6 +232,15 @@ export function applyAxisRhythm(
 		return
 	}
 
+	// On e-ink / slow-update displays the variable font axis animation produces no
+	// visible effect — the panel cannot refresh fast enough to show transitions.
+	// Skip all animation work and restore the element to its clean state.
+	// matchMedia('(update: slow)') is true on Kindle, Remarkable, and similar panels.
+	if (window.matchMedia('(update: slow)').matches) {
+		element.innerHTML = originalHTML
+		return
+	}
+
 	// Save scroll position — iOS Safari does not support overflow-anchor: none
 	const scrollY = window.scrollY
 
