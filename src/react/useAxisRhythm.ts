@@ -120,7 +120,7 @@ export function useAxisRhythm(options: AxisRhythmOptions) {
 	// letter-spacing or scaleX compensation. document.fonts.ready resolves once
 	// all @font-face rules have finished loading.
 	useEffect(() => {
-		document.fonts.ready.then(run)
+		document.fonts?.ready?.then(run)
 	}, [run])
 
 	return ref
