@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 	title: "Axis Rhythm — Per-line variable font axis alternation",
 	icons: { icon: "/icon.svg", shortcut: "/icon.svg", apple: "/icon.svg" },
 	description:
-		"Axis Rhythm cycles any variable font axis — wdth, wght, opsz — across paragraph lines, creating a subtle typographic texture impossible in CSS alone. Works with React, vanilla JS, or any framework.",
+		"Axis Rhythm cycles any variable font axis — wdth, wght, opsz — across paragraph lines, creating a subtle typographic texture impossible in CSS alone. React + vanilla JS.",
 	keywords: [
 		"axis rhythm", "variable font", "font axis", "wdth", "wght", "typography",
 		"TypeScript", "npm", "react typography", "letter spacing", "typesetting",
@@ -26,6 +26,7 @@ export const metadata: Metadata = {
 		description: "Cycle any variable font axis across paragraph lines. A typographic texture technique, now in one npm package.",
 	},
 	metadataBase: new URL("https://axisrhythm.com"),
+	alternates: { canonical: "https://axisrhythm.com" },
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

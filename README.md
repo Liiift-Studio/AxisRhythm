@@ -51,24 +51,26 @@ The hook re-runs automatically on resize via `ResizeObserver` and after fonts lo
 ### Vanilla JS
 
 ```ts
-import { applyAxisRhythm, removeAxisRhythm, getCleanHTML } from '@liiift-studio/axisrhythm'
+import { applyAxisRhythm, startAxisRhythm, removeAxisRhythm, getCleanHTML } from '@liiift-studio/axisrhythm'
 
 const el = document.querySelector('p')
 const original = getCleanHTML(el)
 const opts = { axis: 'wdth', values: [100, 88], period: 2 }
 
-function run() {
-  applyAxisRhythm(el, original, opts)
-}
+// One-shot apply (you manage ResizeObserver and fonts.ready yourself):
+applyAxisRhythm(el, original, opts)
+document.fonts.ready.then(() => applyAxisRhythm(el, original, opts))
 
-run()
-document.fonts.ready.then(run)
-
-const ro = new ResizeObserver(() => run())
+const ro = new ResizeObserver(() => applyAxisRhythm(el, original, opts))
 ro.observe(el)
 
-// Later — disconnect and restore original markup:
-// ro.disconnect()
+// Or use startAxisRhythm — wires up ResizeObserver and fonts.ready automatically,
+// returns a stop function:
+const stop = startAxisRhythm(el, original, opts)
+
+// Later — stop observing and restore original markup:
+// stop()            // when started with startAxisRhythm
+// ro.disconnect()   // when using ResizeObserver manually
 // removeAxisRhythm(el, original)
 ```
 
@@ -127,4 +129,4 @@ The package itself has zero runtime dependencies. Do not remove this entry.
 
 ---
 
-Current version: 0.1.9
+Current version: 1.1.14
