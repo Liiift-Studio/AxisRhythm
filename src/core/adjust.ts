@@ -227,7 +227,7 @@ export function applyAxisRhythm(
 
 	// The axis alternation is a decorative typographic effect — skip it entirely
 	// when the user has requested reduced motion.
-	if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+	if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
 		element.innerHTML = originalHTML
 		return
 	}
@@ -236,7 +236,7 @@ export function applyAxisRhythm(
 	// visible effect — the panel cannot refresh fast enough to show transitions.
 	// Skip all animation work and restore the element to its clean state.
 	// matchMedia('(update: slow)') is true on Kindle, Remarkable, and similar panels.
-	if (window.matchMedia('(update: slow)').matches) {
+	if (window.matchMedia?.('(update: slow)')?.matches) {
 		element.innerHTML = originalHTML
 		return
 	}

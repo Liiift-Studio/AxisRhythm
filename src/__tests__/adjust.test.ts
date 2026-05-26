@@ -1,5 +1,5 @@
 // axis-rhythm/src/__tests__/adjust.test.ts — core algorithm tests
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { applyAxisRhythm, removeAxisRhythm, getCleanHTML } from '../core/adjust'
 import { AXIS_RHYTHM_CLASSES } from '../core/types'
 
@@ -285,5 +285,45 @@ describe('axis-rhythm', () => {
 		applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 96], period: 2 })
 		const lines = el.querySelectorAll(`.${AXIS_RHYTHM_CLASSES.line}`)
 		expect(lines.length).toBe(1)
+	})
+
+	// 20. prefers-reduced-motion: applyAxisRhythm restores originalHTML and injects no markup
+	it('prefers-reduced-motion: restores originalHTML and injects no line spans', () => {
+		const el = makeElement(nWords(14))
+		const original = getCleanHTML(el)
+		vi.spyOn(window, 'matchMedia').mockReturnValue({
+			matches: true, media: '', onchange: null, addListener: () => {}, removeListener: () => {},
+			addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => true,
+		} as MediaQueryList)
+		applyAxisRhythm(el, original, { axis: 'wdth', values: [100, 96], period: 2 })
+		expect(el.innerHTML).toBe(original)
+		expect(el.querySelectorAll(`.${AXIS_RHYTHM_CLASSES.line}`).length).toBe(0)
+		vi.restoreAllMocks()
+	})
+
+	// 21. update:slow: applyAxisRhythm restores originalHTML
+	it('update:slow: restores originalHTML on e-ink display', () => {
+		const el = makeElement(nWords(14))
+		const original = getCleanHTML(el)
+		vi.spyOn(window, 'matchMedia').mockReturnValue({
+			matches: true, media: '', onchange: null, addListener: () => {}, removeListener: () => {},
+			addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => true,
+		} as MediaQueryList)
+		applyAxisRhythm(el, original, {})
+		expect(el.innerHTML).toBe(original)
+		vi.restoreAllMocks()
+	})
+
+	// 22. SSR guard: applyAxisRhythm does not throw when window is undefined
+	it('SSR guard: does not throw when called server-side (window undefined)', () => {
+		const el = makeElement(nWords(7))
+		const original = getCleanHTML(el)
+		const win = (globalThis as Record<string, unknown>).window
+		delete (globalThis as Record<string, unknown>).window
+		try {
+			expect(() => applyAxisRhythm(el, original, {})).not.toThrow()
+		} finally {
+			;(globalThis as Record<string, unknown>).window = win
+		}
 	})
 })
