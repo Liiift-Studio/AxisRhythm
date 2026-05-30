@@ -16,6 +16,8 @@ function tryLoadSyllable(): void {
 			_syllable = 'syllable' in mod ? mod.syllable : (mod as { default: (w: string) => number }).default
 		})
 		.catch(() => {
+			// Reset flag so future callers can retry (e.g. after a network hiccup)
+			_syllableLoading = false
 			console.warn('[axisrhythm] source: "syllable-density" requires the `syllable` package — falling back to "fixed"')
 		})
 }
@@ -41,6 +43,8 @@ function tryLoadPretext(): void {
 	import(/* @vite-ignore */ '@chenglou/pretext' as string)
 		.then((m) => { _pretext = m as PretextModule })
 		.catch(() => {
+			// Reset flag so future callers can retry (e.g. after a network hiccup)
+			_pretextLoading = false
 			console.warn('[axisrhythm] canvas lineDetection requires @chenglou/pretext — falling back to BCR')
 		})
 }
@@ -49,11 +53,12 @@ function tryLoadPretext(): void {
 type PreparedEntry = { originalHTML: string; prepared: unknown }
 const pretextCache = new WeakMap<HTMLElement, PreparedEntry>()
 
-/** Build the canvas-compatible font string from an element's computed style */
+/** Build the canvas-compatible font string from an element's computed style.
+ * CSS font shorthand order: style weight size family */
 function getCanvasFont(el: HTMLElement): string {
 	const s = getComputedStyle(el)
 	const family = s.fontFamily.split(',')[0].replace(/['"]/g, '').trim()
-	return `${s.fontWeight} ${s.fontSize} ${family}`
+	return `${s.fontStyle} ${s.fontWeight} ${s.fontSize} ${family}`
 }
 
 /** Get the computed line height in px, falling back to fontSize × 1.2 */
@@ -101,9 +106,30 @@ function groupSpansByPretext(
  *
  * e.g. overrideAxis('"wght" 300, "opsz" 18', 'wght', 700) → '"wght" 700, "opsz" 18'
  */
+/** Escape special regex metacharacters so a caller-supplied axis tag is matched literally */
+function escapeRegex(s: string): string {
+	return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/** Cache of compiled axis-tag regex patterns, keyed by axis tag string */
+const _axisPatternCache = new Map<string, RegExp>()
+
+/** Get or create a compiled regex for matching an axis tag in a font-variation-settings string */
+function getAxisPattern(axis: string): RegExp {
+	let re = _axisPatternCache.get(axis)
+	if (!re) {
+		// Match the axis tag (in single or double quotes) followed by its numeric value.
+		// Anchored with a word boundary after the closing quote so "BCD" does not match
+		// inside "ABCD".
+		re = new RegExp(`(["'])${escapeRegex(axis)}\\1\\s+[\\d.eE+-]+`)
+		_axisPatternCache.set(axis, re)
+	}
+	return re
+}
+
 function overrideAxis(baseFVS: string, axis: string, value: number): string {
 	if (!baseFVS || baseFVS === 'normal') return `"${axis}" ${value}`
-	const pattern = new RegExp(`(["'])${axis}\\1\\s+[\\d.eE+-]+`)
+	const pattern = getAxisPattern(axis)
 	const replacement = `"${axis}" ${value}`
 	return pattern.test(baseFVS)
 		? baseFVS.replace(pattern, replacement)
@@ -331,7 +357,10 @@ export function applyAxisRhythm(
 	}
 	const lineGroups: LineGroup[] = []
 
-	const useCanvas = lineDetection === 'canvas' && _pretext !== null
+	// Capture _pretext as a local const so TypeScript can narrow the type safely
+	// within the canvas branch, avoiding non-null assertions on a mutable module var.
+	const capturedPretext = _pretext
+	const useCanvas = lineDetection === 'canvas' && capturedPretext !== null
 
 	if (useCanvas) {
 		// --- Canvas path (pretext) ---
@@ -341,7 +370,7 @@ export function applyAxisRhythm(
 		if (cached && cached.originalHTML === originalHTML) {
 			prepared = cached.prepared
 		} else {
-			prepared = _pretext!.prepareWithSegments(
+			prepared = capturedPretext.prepareWithSegments(
 				element.textContent ?? '',
 				getCanvasFont(element),
 			)
@@ -350,7 +379,7 @@ export function applyAxisRhythm(
 
 		const maxWidth = element.offsetWidth
 		const lineHeight = getLineHeightPx(element)
-		const { lines } = _pretext!.layoutWithLines(prepared, maxWidth, lineHeight)
+		const { lines } = capturedPretext.layoutWithLines(prepared, maxWidth, lineHeight)
 
 		// Map pretext line texts back to word spans.
 		const grouped = groupSpansByPretext(wordSpans, lines)
@@ -389,7 +418,10 @@ export function applyAxisRhythm(
 	//   Lines in between are linearly interpolated.
 
 	let densityAxisValues: number[] | null = null
-	if (source === 'syllable-density' && _syllable !== null) {
+	// Capture _syllable as a local const so TypeScript narrows safely within the branch,
+	// avoiding non-null assertions on a mutable module var.
+	const capturedSyllable = _syllable
+	if (source === 'syllable-density' && capturedSyllable !== null) {
 		// Compute average syllables-per-word for each line
 		const lineDensities = lineGroups.map((group) => {
 			const words = group.spans
@@ -398,11 +430,12 @@ export function applyAxisRhythm(
 				.flatMap((t) => t.split(/\s+/))
 				.filter(Boolean)
 			if (words.length === 0) return 0
-			const total = words.reduce((sum, w) => sum + _syllable!(w), 0)
+			const total = words.reduce((sum, w) => sum + capturedSyllable(w), 0)
 			return total / words.length
 		})
-		const minD = Math.min(...lineDensities)
-		const maxD = Math.max(...lineDensities)
+		// Use reduce instead of spread to avoid stack overflow on texts with many lines
+		const minD = lineDensities.reduce((a, b) => Math.min(a, b), Infinity)
+		const maxD = lineDensities.reduce((a, b) => Math.max(a, b), -Infinity)
 		const rangeD = maxD - minD || 1
 		const lo = values[0] ?? 100
 		const hi = values[values.length - 1] ?? 96
@@ -475,6 +508,8 @@ export function applyAxisRhythm(
 		if (i < lineElements.length - 1) {
 			const br = document.createElement('br')
 			br.setAttribute('data-ar-break', '')
+			// Hide from screen readers — purely presentational line break
+			br.setAttribute('aria-hidden', 'true')
 			element.appendChild(br)
 		}
 	})
@@ -572,6 +607,13 @@ export function startAxisRhythm(
 ): () => void {
 	if (typeof window === 'undefined') return () => {}
 
+	// Respect reduced-motion: skip the animation entirely and return a no-op stop
+	// function so the caller still gets a valid cleanup handle.
+	if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
+		element.innerHTML = originalHTML
+		return () => {}
+	}
+
 	// Build the .ar-line DOM structure (static, no animated options needed).
 	applyAxisRhythm(element, originalHTML, options)
 
@@ -659,10 +701,20 @@ export function startAxisRhythm(
 		io.observe(element)
 	}
 
+	// Reset lastTime when the tab becomes visible again so the first rAF frame after
+	// a hidden period does not produce a large dt spike and a visible phase jump.
+	function onVisibilityChange(): void {
+		if (document.visibilityState === 'visible') {
+			lastTime = null
+		}
+	}
+	document.addEventListener('visibilitychange', onVisibilityChange)
+
 	return () => {
 		running = false
 		cancelAnimationFrame(rafId)
 		io?.disconnect()
+		document.removeEventListener('visibilitychange', onVisibilityChange)
 		if (isPrimary) sharedPhases.delete(element)
 	}
 }

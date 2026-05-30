@@ -24,8 +24,11 @@ export function useAxisRhythm(options: AxisRhythmOptions) {
 	const stopRef = useRef<(() => void) | null>(null)
 
 	const { axis, values, period, align, lineDetection, linePreservation, animate, waveShape, speed, syncTo, intersect } = options
-	const v0 = values?.[0]
-	const v1 = values?.[1]
+
+	// Serialise the full values array so that changes to any element — including
+	// values[2] and beyond (valid when period > 2) — trigger a re-run. A JSON string
+	// is a stable scalar dep that correctly tracks deep equality for number arrays.
+	const valuesKey = values ? JSON.stringify(values) : undefined
 
 	const run = useCallback(() => {
 		const el = ref.current
@@ -43,7 +46,8 @@ export function useAxisRhythm(options: AxisRhythmOptions) {
 		} else {
 			applyAxisRhythm(el, originalHTMLRef.current, optionsRef.current)
 		}
-	}, [axis, v0, v1, period, align, lineDetection, linePreservation, animate, waveShape, speed, syncTo, intersect])
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [axis, valuesKey, period, align, lineDetection, linePreservation, animate, waveShape, speed, syncTo, intersect])
 
 	useLayoutEffect(() => {
 		const el = ref.current
@@ -119,8 +123,20 @@ export function useAxisRhythm(options: AxisRhythmOptions) {
 	// (font-display: swap) use the fallback font's widths and produce wrong
 	// letter-spacing or scaleX compensation. document.fonts.ready resolves once
 	// all @font-face rules have finished loading.
+	//
+	// A mounted guard prevents the callback from running on a detached element if
+	// the component unmounts before fonts have finished loading, and also prevents
+	// the extra synchronous microtask re-run that occurs when fonts.ready is already
+	// resolved (which happens on every subsequent prop change).
 	useEffect(() => {
-		document.fonts?.ready?.then(run)
+		if (typeof document === 'undefined' || !document.fonts?.ready) return
+		// Only run once per mount: if fonts are already loaded, skip the re-run.
+		if (document.fonts.status === 'loaded') return
+		let mounted = true
+		document.fonts.ready.then(() => {
+			if (mounted) run()
+		})
+		return () => { mounted = false }
 	}, [run])
 
 	return ref

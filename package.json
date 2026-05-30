@@ -26,9 +26,6 @@
 	"peerDependencies": {
 		"react": ">=17",
 		"react-dom": ">=17",
-		"@chenglou/pretext": ">=0.0.5"
-	},
-	"optionalDependencies": {
 		"@chenglou/pretext": ">=0.0.5",
 		"syllable": "^5.0.0"
 	},
@@ -40,6 +37,9 @@
 			"optional": true
 		},
 		"@chenglou/pretext": {
+			"optional": true
+		},
+		"syllable": {
 			"optional": true
 		}
 	},

@@ -64,9 +64,10 @@ document.fonts.ready.then(() => applyAxisRhythm(el, original, opts))
 const ro = new ResizeObserver(() => applyAxisRhythm(el, original, opts))
 ro.observe(el)
 
-// Or use startAxisRhythm — wires up ResizeObserver and fonts.ready automatically,
-// returns a stop function:
-const stop = startAxisRhythm(el, original, opts)
+// Or use startAxisRhythm for an animated wave — returns a stop function.
+// Note: startAxisRhythm does NOT wire up ResizeObserver or fonts.ready;
+// add those yourself if needed (see applyAxisRhythm example above).
+const stop = startAxisRhythm(el, original, { ...opts, animate: true })
 
 // Later — stop observing and restore original markup:
 // stop()            // when started with startAxisRhythm
@@ -91,10 +92,15 @@ const opts: AxisRhythmOptions = { axis: 'wdth', values: [100, 88], period: 2 }
 | `axis` | `'wdth'` | Variable font axis tag, e.g. `'wdth'`, `'wght'`, `'opsz'` |
 | `values` | `[100, 96]` | Axis values to cycle through across lines. Set `period` equal to the number of values for all values to appear exactly once per cycle |
 | `period` | `2` | Lines per cycle. Set equal to `values.length` — if smaller, trailing values are never reached; if larger, values repeat within the cycle |
-| `align` | `'top'` | `'top' \| 'bottom' \| 'end'`. `'top'` counts from the first line; `'bottom'` counts from the last; `'end'` anchors to the trailing edge of each line (right in LTR, left in RTL layouts) |
+| `align` | `'top'` | `'top' \| 'bottom' \| 'end'`. `'top'` counts from the first line; `'bottom'` counts from the last; `'end'` is direction-aware — equivalent to `'bottom'` in LTR text and `'top'` in RTL text |
 | `lineDetection` | `'bcr'` | `'bcr'` reads actual browser layout — ground truth, works with any font and inline HTML. `'canvas'` uses `@chenglou/pretext` for arithmetic line breaking with no forced reflow on resize (`npm install @chenglou/pretext`). Falls back to `'bcr'` while pretext loads |
 | `linePreservation` | `'none'` | `'none'` — no compensation; line widths vary with the axis value (best for display type where reflow is part of the effect). `'spacing'` — adjusts letter-spacing per line to match natural widths; prevents overflow; **recommended for body text**. `'scale'` — applies a GPU scaleX transform per line; no letter-spacing changes, slight horizontal glyph compression at large axis ranges |
-| `intersect` | `false` | Pause the animation when the element is off-screen; resume when visible. Uses `IntersectionObserver` internally |
+| `source` | `'fixed'` | `'fixed'` — cycle through `values` in order. `'syllable-density'` — per-line syllable density drives the axis value; `values[0]` → simplest lines, `values[last]` → most complex. Requires the optional `syllable` package: `npm install syllable` |
+| `animate` | `false` | Turn the static snapshot into a continuous ambient wave via `startAxisRhythm`. Each line is offset in phase so the wave drifts across the paragraph over time |
+| `waveShape` | `'sine'` | Wave shape for animated mode: `'sine'` (smooth), `'triangle'` (linear in/out), `'spring'` (sine with slight overshoot) |
+| `speed` | `1` | Animation speed multiplier. At `1` one full cycle takes 4 seconds. Use values below `1` for imperceptible background motion |
+| `syncTo` | — | Synchronise phase with another animated element's loop. The target element must already have `startAxisRhythm` running on it |
+| `intersect` | `false` | Defer the layout pass until the element enters the viewport (static mode), or pause/resume the rAF loop when off/on-screen (animated mode). Uses `IntersectionObserver` internally |
 | `as` | `'p'` | HTML element to render, e.g. `'h1'`, `'div'`, `'li'`. Accepts any valid React element type. *(React component only)* |
 
 ---
