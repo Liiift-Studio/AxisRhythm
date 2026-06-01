@@ -2,12 +2,15 @@ import { ImageResponse } from 'next/og'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
-export const alt = 'Axis Rhythm — Per-line variable font axis alternation'
+export const alt = 'Social preview: alternating weight lines in a paragraph — axis rhythm visualised'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
+// Cache font buffer at module scope — read once per serverless instance
+const interLightPromise = readFile(join(process.cwd(), 'public/fonts/inter-300.woff'))
+
 export default async function Image() {
-	const interLight = await readFile(join(process.cwd(), 'public/fonts/inter-300.woff'))
+	const interLight = await interLightPromise
 	return new ImageResponse(
 		(
 			<div style={{ background: '#0c0c0c', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '72px 80px', fontFamily: 'Inter, sans-serif' }}>
@@ -24,7 +27,7 @@ export default async function Image() {
 				<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
 					<div style={{ fontSize: 14, color: 'rgba(255,255,255,0.28)', letterSpacing: '0.04em', display: 'flex', gap: 20 }}>
 						<span>TypeScript</span><span style={{ opacity: 0.4 }}>·</span>
-						<span>Zero dependencies</span><span style={{ opacity: 0.4 }}>·</span>
+						<span>No required dependencies</span><span style={{ opacity: 0.4 }}>·</span>
 						<span>React + Vanilla JS</span>
 					</div>
 					<div style={{ fontSize: 13, color: 'rgba(255,255,255,0.18)', letterSpacing: '0.04em' }}>axisrhythm.com</div>

@@ -1,7 +1,7 @@
 "use client"
 
 // Interactive axis rhythm demo with live controls, cursor/gyro modes, and period slider
-import { useState, useEffect, useDeferredValue } from "react"
+import { useState, useEffect, useDeferredValue, useCallback, memo, useMemo } from "react"
 import { AxisRhythmText } from "@liiift-studio/axisrhythm"
 import type { AxisRhythmOptions } from "@liiift-studio/axisrhythm"
 
@@ -22,41 +22,50 @@ const AXIS_CONFIG = {
 type AxisKey = keyof typeof AXIS_CONFIG
 
 /** Labelled range slider with value displayed below the track */
-function Slider({ label, value, min, max, step, onChange, title }: { label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void; title?: string }) {
+const Slider = memo(function Slider({ label, value, min, max, step, onChange, title, disabled }: { label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void; title?: string; disabled?: boolean }) {
 	return (
-		<div className="flex flex-col gap-1">
+		<div className="flex flex-col gap-1" style={{ opacity: disabled ? 0.35 : 1, transition: 'opacity 0.15s ease' }}>
 			<span className="text-xs uppercase tracking-widest opacity-50">{label}</span>
-			<input type="range" min={min} max={max} step={step} value={value} aria-label={label} title={title} onChange={e => onChange(Number(e.target.value))} onTouchStart={e => e.stopPropagation()} style={{ touchAction: 'none' }} />
+			<input type="range" min={min} max={max} step={step} value={value} aria-label={label} title={title} disabled={disabled} onChange={e => onChange(Number(e.target.value))} onTouchStart={e => e.stopPropagation()} style={{ touchAction: 'none' }} />
 			<span className="tabular-nums text-xs opacity-50 text-right">{value}</span>
 		</div>
 	)
-}
+})
 
 /** Before/after toggle — left half = without effect, right half filled = with effect */
-function BeforeAfterToggle({ active, onClick }: { active: boolean; onClick: () => void }) {
+const BeforeAfterToggle = memo(function BeforeAfterToggle({ active, onClick }: { active: boolean; onClick: () => void }) {
 	return (
 		<button
 			onClick={onClick}
 			aria-label="Toggle before/after comparison"
+			aria-pressed={active}
 			title={active ? 'Hide comparison' : 'Compare without effect'}
 			style={{
 				position: 'absolute', bottom: 0, right: 0,
+				// 44×44 touch target (WCAG 2.5.5) — visual circle stays 32px via padding
+				width: 44, height: 44,
+				padding: 6,
+				background: 'transparent',
+				display: 'flex', alignItems: 'center', justifyContent: 'center',
+				cursor: 'pointer',
+			}}
+		>
+			<span style={{
 				width: 32, height: 32, borderRadius: '50%',
 				border: '1px solid currentColor',
 				opacity: active ? 0.8 : 0.25,
-				background: 'transparent',
 				display: 'flex', alignItems: 'center', justifyContent: 'center',
-				cursor: 'pointer', transition: 'opacity 0.15s ease',
-			}}
-		>
-			<svg width="14" height="10" viewBox="0 0 14 10" fill="none">
-				<rect x="0.5" y="0.5" width="13" height="9" rx="1" stroke="currentColor" strokeWidth="1"/>
-				<line x1="7" y1="0.5" x2="7" y2="9.5" stroke="currentColor" strokeWidth="1"/>
-				<rect x="8" y="1.5" width="5" height="7" fill="currentColor"/>
-			</svg>
+				transition: 'opacity 0.15s ease',
+			}}>
+				<svg width="14" height="10" viewBox="0 0 14 10" fill="none">
+					<rect x="0.5" y="0.5" width="13" height="9" rx="1" stroke="currentColor" strokeWidth="1"/>
+					<line x1="7" y1="0.5" x2="7" y2="9.5" stroke="currentColor" strokeWidth="1"/>
+					<rect x="8" y="1.5" width="5" height="7" fill="currentColor"/>
+				</svg>
+			</span>
 		</button>
 	)
-}
+})
 
 /** Cursor icon SVG */
 function CursorIcon() {
@@ -91,6 +100,8 @@ export default function Demo() {
 	// Interaction modes — mutually exclusive
 	const [cursorMode, setCursorMode] = useState(false)
 	const [gyroMode, setGyroMode] = useState(false)
+	// Error state for when gyro permission is denied
+	const [gyroError, setGyroError] = useState<string | null>(null)
 
 	// Gyro-driven values — kept separate from slider state so slider value props
 	// never change during gyro mode (which would cause mobile to scroll to the input)
@@ -110,13 +121,13 @@ export default function Demo() {
 
 	const cfg = AXIS_CONFIG[axis]
 
-	function handleAxisChange(next: AxisKey) {
+	const handleAxisChange = useCallback((next: AxisKey) => {
 		setAxis(next)
 		setValueHigh(AXIS_CONFIG[next].defaultHigh)
 		setValueLow(AXIS_CONFIG[next].defaultLow)
 		setGyroHigh(AXIS_CONFIG[next].defaultHigh)
 		setGyroLow(AXIS_CONFIG[next].defaultLow)
-	}
+	}, [])
 
 	// Effective values: gyro-driven when gyroMode is active, slider-driven otherwise
 	const effectiveHigh = gyroMode ? gyroHigh : valueHigh
@@ -137,7 +148,13 @@ export default function Demo() {
 			setValueLow(Math.round(rawLow / step) * step)
 		}
 		const handleKey = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') setCursorMode(false)
+			// Only exit cursor mode when no input/textarea is focused
+			if (e.key === 'Escape') {
+				const active = document.activeElement
+				if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')) {
+					setCursorMode(false)
+				}
+			}
 		}
 		window.addEventListener('mousemove', handleMove)
 		window.addEventListener('keydown', handleKey)
@@ -180,64 +197,97 @@ export default function Demo() {
 		}
 	}, [gyroMode, cfg])
 
-	// Toggle cursor mode — turns off gyro if active
-	const toggleCursor = () => {
+	// Toggle cursor mode — turns off gyro if active, seeds initial values from current mouse position
+	const toggleCursor = useCallback((e: React.MouseEvent) => {
 		setGyroMode(false)
-		setCursorMode(v => !v)
-	}
+		setGyroError(null)
+		setCursorMode(v => {
+			if (!v) {
+				// Pre-seed values from the click position to avoid jump on first mousemove
+				const step = cfg.step
+				const rawHigh = (e.clientX / window.innerWidth) * (cfg.max - cfg.min) + cfg.min
+				const rawLow = (1 - e.clientY / window.innerHeight) * (cfg.max - cfg.min) + cfg.min
+				setValueHigh(Math.round(rawHigh / step) * step)
+				setValueLow(Math.round(rawLow / step) * step)
+			}
+			return !v
+		})
+	}, [cfg])
 
 	// Toggle gyro mode — requests iOS permission if needed, turns off cursor if active
-	const toggleGyro = async () => {
+	const toggleGyro = useCallback(async () => {
 		if (gyroMode) {
 			setGyroMode(false)
+			setGyroError(null)
 			return
 		}
 		setCursorMode(false)
-		const DOE = DeviceOrientationEvent as typeof DeviceOrientationEvent & {
-			requestPermission?: () => Promise<PermissionState>
+		setGyroError(null)
+		try {
+			const DOE = DeviceOrientationEvent as typeof DeviceOrientationEvent & {
+				requestPermission?: () => Promise<PermissionState>
+			}
+			if (typeof DOE.requestPermission === 'function') {
+				const permission = await DOE.requestPermission()
+				if (permission === 'granted') {
+					setGyroMode(true)
+				} else {
+					setGyroError('Motion access denied. Enable in Settings → Safari → Motion & Orientation Access.')
+				}
+			} else {
+				setGyroMode(true)
+			}
+		} catch {
+			setGyroError('Could not request motion permission.')
 		}
-		if (typeof DOE.requestPermission === 'function') {
-			const permission = await DOE.requestPermission()
-			if (permission === 'granted') setGyroMode(true)
-		} else {
-			setGyroMode(true)
-		}
-	}
+	}, [gyroMode])
 
-	const sampleStyle: React.CSSProperties = {
+	const toggleComparing = useCallback(() => setComparing(v => !v), [])
+
+	// Memoised sample style — stable reference avoids unnecessary AxisRhythmText re-runs
+	const sampleStyle = useMemo<React.CSSProperties>(() => ({
 		fontFamily: "var(--font-merriweather), serif",
 		fontSize: "1.125rem",
 		lineHeight: "1.8",
 		fontVariationSettings: '"wght" 300, "opsz" 18, "wdth" 100',
-	}
+	}), [])
 
 	const activeMode = cursorMode || gyroMode
 
 	return (
 		<div className="w-full">
-			<div className="grid grid-cols-3 gap-6 mb-6">
-				<Slider label="Axis High" value={valueHigh} min={cfg.min} max={cfg.max} step={cfg.step} onChange={setValueHigh} title="The maximum axis value assigned to lines — lines at the peak of each wave cycle will use this setting" />
-				<Slider label="Axis Low" value={valueLow} min={cfg.min} max={cfg.max} step={cfg.step} onChange={setValueLow} title="The minimum axis value assigned to lines — lines at the trough of each wave cycle will use this setting" />
+			{/* Responsive grid — single column on narrow mobile, three columns on sm+ */}
+			<div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
+				<Slider label="Axis High" value={valueHigh} min={cfg.min} max={cfg.max} step={cfg.step} onChange={setValueHigh} disabled={gyroMode} title="The maximum axis value assigned to lines — lines at the peak of each wave cycle will use this setting" />
+				<Slider label="Axis Low" value={valueLow} min={cfg.min} max={cfg.max} step={cfg.step} onChange={setValueLow} disabled={gyroMode} title="The minimum axis value assigned to lines — lines at the trough of each wave cycle will use this setting" />
 				<Slider label="Period" value={period} min={1} max={6} step={1} onChange={setPeriod} title="How many lines it takes to complete one full high-to-low-to-high cycle — shorter period = tighter alternation, longer = slower rhythm" />
 			</div>
 			<div className="flex flex-wrap items-center gap-3 mb-8">
-				<span className="text-xs uppercase tracking-widest opacity-50">Axis</span>
-				{(['wdth', 'wght'] as const).map(v => (
-					<button key={v} onClick={() => handleAxisChange(v)} aria-pressed={axis === v} title={v === 'wdth' ? 'Animate the width axis — varies how condensed or expanded each line appears' : 'Animate the weight axis — varies how light or heavy each line appears'} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: axis === v ? 1 : 0.5, background: axis === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
-				))}
-				<span className="text-xs uppercase tracking-widest opacity-50 ml-4">Align</span>
-				{(['top', 'bottom'] as const).map(v => (
-					<button key={v} onClick={() => setAlign(v)} aria-pressed={align === v} title={v === 'top' ? 'Align lines to the top baseline — rhythm starts from the first line downward' : 'Align lines to the bottom baseline — rhythm starts from the last line upward'} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: align === v ? 1 : 0.5, background: align === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
-				))}
-				<span className="text-xs uppercase tracking-widest opacity-50 ml-4">Preserve</span>
-				{(['none', 'spacing', 'scale'] as const).map(v => (
-					<button key={v} onClick={() => setLinePreservation(v)} aria-pressed={linePreservation === v} title={v === 'none' ? 'No compensation — axis changes may shift line heights and cause ragged paragraph edges' : v === 'spacing' ? 'Adjust letter-spacing per line to keep each line the same length despite axis variation' : 'Scale each line uniformly to keep line lengths consistent despite axis variation'} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: linePreservation === v ? 1 : 0.5, background: linePreservation === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
-				))}
+				<div role="group" aria-label="Axis" className="flex items-center gap-2">
+					<span className="text-xs uppercase tracking-widest opacity-50">Axis</span>
+					{(['wdth', 'wght'] as const).map(v => (
+						<button key={v} onClick={() => handleAxisChange(v)} aria-pressed={axis === v} title={v === 'wdth' ? 'Animate the width axis — varies how condensed or expanded each line appears' : 'Animate the weight axis — varies how light or heavy each line appears'} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: axis === v ? 1 : 0.5, background: axis === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
+					))}
+				</div>
+				<div role="group" aria-label="Align" className="flex items-center gap-2 ml-4">
+					<span className="text-xs uppercase tracking-widest opacity-50">Align</span>
+					{(['top', 'bottom'] as const).map(v => (
+						<button key={v} onClick={() => setAlign(v)} aria-pressed={align === v} title={v === 'top' ? 'Align lines to the top baseline — rhythm starts from the first line downward' : 'Align lines to the bottom baseline — rhythm starts from the last line upward'} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: align === v ? 1 : 0.5, background: align === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
+					))}
+				</div>
+				<div role="group" aria-label="Preserve" className="flex items-center gap-2 ml-4">
+					<span className="text-xs uppercase tracking-widest opacity-50">Preserve</span>
+					{(['none', 'spacing', 'scale'] as const).map(v => (
+						<button key={v} onClick={() => setLinePreservation(v)} aria-pressed={linePreservation === v} title={v === 'none' ? 'No compensation — axis changes may shift line heights and cause ragged paragraph edges' : v === 'spacing' ? 'Adjust letter-spacing per line to keep each line the same length despite axis variation' : 'Scale each line uniformly to keep line lengths consistent despite axis variation'} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: linePreservation === v ? 1 : 0.5, background: linePreservation === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
+					))}
+				</div>
 
 				{/* Cursor mode — desktop/hover-capable devices only */}
 				{showCursor && (
 					<button
 						onClick={toggleCursor}
+						aria-label={cursorMode ? 'Deactivate cursor mode' : 'Activate cursor mode — move cursor to control axis values'}
+						aria-pressed={cursorMode}
 						title="Move your cursor to control high value (X) and low value (Y)"
 						className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border transition-all ml-auto"
 						style={{
@@ -255,6 +305,8 @@ export default function Demo() {
 				{showGyro && (
 					<button
 						onClick={toggleGyro}
+						aria-label={gyroMode ? 'Deactivate tilt mode' : 'Activate tilt mode — tilt device to control axis values'}
+						aria-pressed={gyroMode}
 						title="Tilt your device to control high value (left/right) and low value (front/back)"
 						className="flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border transition-all ml-auto"
 						style={{
@@ -268,24 +320,28 @@ export default function Demo() {
 					</button>
 				)}
 			</div>
+			{/* Permission-denied feedback for gyro mode */}
+			{gyroError && (
+				<p className="text-xs mb-4" style={{ color: 'oklch(0.75 0.18 30)' }} role="alert">{gyroError}</p>
+			)}
 			<div className="relative pb-8">
 				<div className="flex flex-col gap-8">
 					{PARAGRAPHS.map((para, i) => (
-						<AxisRhythmText key={i} axis={axis} values={[dValueHigh, dValueLow]} period={dPeriod} align={align} linePreservation={linePreservation} style={sampleStyle}>
+						<AxisRhythmText key={para.slice(0, 20)} axis={axis} values={[dValueHigh, dValueLow]} period={dPeriod} align={align} linePreservation={linePreservation} style={sampleStyle}>
 							{para}
 						</AxisRhythmText>
 					))}
 				</div>
 				{beforeAfter && (
 					<div aria-hidden style={{ position: 'absolute', top: 0, left: 0, width: '100%', pointerEvents: 'none', opacity: 0.25 }} className="flex flex-col gap-8">
-						{PARAGRAPHS.map((para, i) => (
-							<p key={i} style={{ ...sampleStyle, margin: 0 }}>{para}</p>
+						{PARAGRAPHS.map((para) => (
+							<p key={para.slice(0, 20)} style={{ ...sampleStyle, margin: 0 }}>{para}</p>
 						))}
 					</div>
 				)}
-				<BeforeAfterToggle active={beforeAfter} onClick={() => setComparing(v => !v)} />
+				<BeforeAfterToggle active={beforeAfter} onClick={toggleComparing} />
 			</div>
-			<div className="flex items-center gap-3 mt-8">
+			<div className="flex items-center gap-3 mt-8" aria-live="polite">
 				{activeMode && (
 					<p className="text-xs opacity-50 italic" style={{ lineHeight: "1.8" }}>
 						{cursorMode ? 'Move cursor: X for high value, Y for low. Press Esc to exit.' : 'Tilt left/right for high value, front/back for low.'}

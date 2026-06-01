@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 	description:
 		"Axis Rhythm cycles any variable font axis — wdth, wght, opsz — across paragraph lines, creating a subtle typographic texture impossible in CSS alone. React + vanilla JS.",
 	keywords: [
-		"axis rhythm", "variable font", "font axis", "wdth", "wght", "typography",
+		"axis rhythm", "variable font", "font axis", "wdth", "wght", "opsz", "typography",
 		"TypeScript", "npm", "react typography", "letter spacing", "typesetting",
 	],
 	openGraph: {
@@ -24,6 +24,7 @@ export const metadata: Metadata = {
 		card: "summary_large_image",
 		title: "Axis Rhythm — Per-line variable font axis alternation",
 		description: "Cycle any variable font axis across paragraph lines. A typographic texture technique, now in one npm package.",
+		images: ["https://axisrhythm.com/opengraph-image"],
 	},
 	metadataBase: new URL("https://axisrhythm.com"),
 	alternates: { canonical: "https://axisrhythm.com" },
