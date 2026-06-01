@@ -1,5 +1,6 @@
 // vitest.config.ts — test configuration
 import { defineConfig } from 'vitest/config'
+import react from '@vitejs/plugin-react'
 
 // Optional peer deps that are loaded via dynamic import() at runtime.
 // They're not installed in the test environment, so we stub them as empty
@@ -9,6 +10,7 @@ const OPTIONAL_PEER_DEPS = ['syllable', '@chenglou/pretext']
 
 export default defineConfig({
 	plugins: [
+		react(),
 		{
 			name: 'stub-optional-peer-deps',
 			resolveId(id) {
