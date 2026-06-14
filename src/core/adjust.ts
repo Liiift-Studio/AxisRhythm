@@ -10,7 +10,7 @@ let _syllableLoading = false
 function tryLoadSyllable(): void {
 	if (_syllable !== null || _syllableLoading) return
 	_syllableLoading = true
-	import(/* @vite-ignore */ 'syllable' as string)
+	import(/* webpackIgnore: true */ /* turbopackIgnore: true */ 'syllable')
 		.then((m) => {
 			const mod = m as SyllableModule
 			_syllable = 'syllable' in mod ? mod.syllable : (mod as { default: (w: string) => number }).default
@@ -40,7 +40,7 @@ let _pretextLoading = false
 function tryLoadPretext(): void {
 	if (_pretext !== null || _pretextLoading) return
 	_pretextLoading = true
-	import(/* @vite-ignore */ '@chenglou/pretext' as string)
+	import(/* webpackIgnore: true */ /* turbopackIgnore: true */ '@chenglou/pretext')
 		.then((m) => { _pretext = m as PretextModule })
 		.catch(() => {
 			// Reset flag so future callers can retry (e.g. after a network hiccup)
