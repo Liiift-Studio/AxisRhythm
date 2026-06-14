@@ -25,9 +25,9 @@ type AxisKey = keyof typeof AXIS_CONFIG
 const Slider = memo(function Slider({ label, value, min, max, step, onChange, title, disabled }: { label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void; title?: string; disabled?: boolean }) {
 	return (
 		<div className="flex flex-col gap-1" style={{ opacity: disabled ? 0.35 : 1, transition: 'opacity 0.15s ease' }}>
-			<span className="text-xs uppercase tracking-widest opacity-50">{label}</span>
+			<span className="text-xs uppercase tracking-[0.18em] font-medium text-muted">{label}</span>
 			<input type="range" min={min} max={max} step={step} value={value} aria-label={label} title={title} disabled={disabled} onChange={e => onChange(Number(e.target.value))} onTouchStart={e => e.stopPropagation()} style={{ touchAction: 'none' }} />
-			<span className="tabular-nums text-xs opacity-50 text-right">{value}</span>
+			<span className="tabular-nums text-xs text-muted text-right">{value}</span>
 		</div>
 	)
 })
@@ -264,19 +264,19 @@ export default function Demo() {
 			</div>
 			<div className="flex flex-wrap items-center gap-3 mb-8">
 				<div role="group" aria-label="Axis" className="flex items-center gap-2">
-					<span className="text-xs uppercase tracking-widest opacity-50">Axis</span>
+					<span className="text-xs uppercase tracking-[0.18em] font-medium text-muted">Axis</span>
 					{(['wdth', 'wght'] as const).map(v => (
 						<button key={v} onClick={() => handleAxisChange(v)} aria-pressed={axis === v} title={v === 'wdth' ? 'Animate the width axis — varies how condensed or expanded each line appears' : 'Animate the weight axis — varies how light or heavy each line appears'} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: axis === v ? 1 : 0.5, background: axis === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
 					))}
 				</div>
 				<div role="group" aria-label="Align" className="flex items-center gap-2 ml-4">
-					<span className="text-xs uppercase tracking-widest opacity-50">Align</span>
+					<span className="text-xs uppercase tracking-[0.18em] font-medium text-muted">Align</span>
 					{(['top', 'bottom'] as const).map(v => (
 						<button key={v} onClick={() => setAlign(v)} aria-pressed={align === v} title={v === 'top' ? 'Align lines to the top baseline — rhythm starts from the first line downward' : 'Align lines to the bottom baseline — rhythm starts from the last line upward'} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: align === v ? 1 : 0.5, background: align === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
 					))}
 				</div>
 				<div role="group" aria-label="Preserve" className="flex items-center gap-2 ml-4">
-					<span className="text-xs uppercase tracking-widest opacity-50">Preserve</span>
+					<span className="text-xs uppercase tracking-[0.18em] font-medium text-muted">Preserve</span>
 					{(['none', 'spacing', 'scale'] as const).map(v => (
 						<button key={v} onClick={() => setLinePreservation(v)} aria-pressed={linePreservation === v} title={v === 'none' ? 'No compensation — axis changes may shift line heights and cause ragged paragraph edges' : v === 'spacing' ? 'Adjust letter-spacing per line to keep each line the same length despite axis variation' : 'Scale each line uniformly to keep line lengths consistent despite axis variation'} className="text-xs px-3 py-1 rounded-full border transition-opacity" style={{ borderColor: 'currentColor', opacity: linePreservation === v ? 1 : 0.5, background: linePreservation === v ? 'var(--btn-bg)' : 'transparent' }}>{v}</button>
 					))}
@@ -343,12 +343,12 @@ export default function Demo() {
 			</div>
 			<div className="flex items-center gap-3 mt-8" aria-live="polite">
 				{activeMode && (
-					<p className="text-xs opacity-50 italic" style={{ lineHeight: "1.8" }}>
+					<p className="text-xs text-muted italic" style={{ lineHeight: "1.8" }}>
 						{cursorMode ? 'Move cursor: X for high value, Y for low. Press Esc to exit.' : 'Tilt left/right for high value, front/back for low.'}
 					</p>
 				)}
 				{!activeMode && (
-					<p className="text-xs opacity-50 italic" style={{ lineHeight: "1.8" }}>Each line gets a different axis value. The paragraph reads as one — like column highlighting for text. The alternation gives the eye a subtle landmark on every line, so it can track its position and find the start of the next without losing its place.</p>
+					<p className="text-xs text-muted italic" style={{ lineHeight: "1.8" }}>Each line gets a different axis value. The paragraph reads as one — like column highlighting for text. The alternation gives the eye a subtle landmark on every line, so it can track its position and find the start of the next without losing its place.</p>
 				)}
 			</div>
 		</div>
